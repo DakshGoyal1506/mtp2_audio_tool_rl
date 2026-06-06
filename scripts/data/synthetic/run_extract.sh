@@ -15,9 +15,22 @@ export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export HF_DATASETS_OFFLINE=1
 
-source /home/speech-nlp-cse/24m0756/anaconda3/etc/profile.d/conda.sh
+if command -v conda >/dev/null 2>&1; then
+    eval "$(conda shell.bash hook)"
+elif [[ -f "${HOME}/anaconda3/etc/profile.d/conda.sh" ]]; then
+    source "${HOME}/anaconda3/etc/profile.d/conda.sh"
+else
+    echo "Error: conda is not available. Load conda or install it under \$HOME/anaconda3." >&2
+    exit 1
+fi
 
-cd /home/speech-nlp-cse/24m0756/abhishek/Desta_grpo
+MTP2_REPO_ROOT="${MTP2_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
+MTP2_DATA_ROOT="${MTP2_DATA_ROOT:?Set MTP2_DATA_ROOT to the external dataset root.}"
+MTP2_EMBED_ROOT="${MTP2_EMBED_ROOT:-${MTP2_DATA_ROOT}/precomputed_embeds}"
+MTP2_AUDIO_ROOT="${MTP2_AUDIO_ROOT:-${MTP2_DATA_ROOT}/audio}"
+MTP2_MANIFEST_ROOT="${MTP2_MANIFEST_ROOT:-${MTP2_DATA_ROOT}}"
+
+cd "$MTP2_REPO_ROOT"
 
 activate_env() {
     local env_name="$1"
@@ -30,13 +43,13 @@ activate_env() {
 }
 
 echo "=== Step 0: Audio checks ==="
-python3 synthetic_dataset/check_audio.py
+python3 scripts/data/synthetic/check_audio.py
 
 # --- Step 1: Main audio processing (speech_recognition, diarization, etc.) ---
 echo ""
 echo "=== Step 1: Running main audio processing tools ==="
 activate_env audio
-python3 synthetic_dataset/process_audio.py
+python3 scripts/data/synthetic/process_audio.py
 echo "=== Step 1 Done ==="
 conda deactivate
 
@@ -46,35 +59,35 @@ export TF_USE_LEGACY_KERAS=1
 
 echo ""
 echo "=== Step 2: Running stress analysis ==="
-python3 synthetic_dataset/process_stress.py
+python3 scripts/data/synthetic/process_stress.py
 echo "=== Step 2 Done ==="
 
 echo ""
 echo "=== Step 3: Running chord recognition ==="
-python3 synthetic_dataset/process_chord.py
+python3 scripts/data/synthetic/process_chord.py
 echo "=== Step 3 Done ==="
 conda deactivate
 
 # --- Step 4: Merge all tool outputs ---
 echo ""
 echo "=== Step 4: Merging tool outputs ==="
-python3 synthetic_dataset/merge_tool_outputs.py
+python3 scripts/data/synthetic/merge_tool_outputs.py
 echo "=== Step 4 Done ==="
 
 # --- Step 5: Extract Qformer embeddings ---
 echo ""
 echo "=== Step 5: Extracting embeddings ==="
 activate_env slm
-python3 synthetic_dataset/extract_embeddings.py \
+python3 scripts/data/synthetic/extract_embeddings.py \
     --model_path "DeSTA-ntu/DeSTA2.5-Audio-Llama-3.1-8B" \
-    --audio_dir "dataset/audio" \
-    --data_jsonl "dataset/grpo_tool_dataset.with_relative_audio.jsonl" \
-    --out_dir "synthetic_dataset/precomputed_embeds"
+    --audio_dir "$MTP2_AUDIO_ROOT" \
+    --data_jsonl "${MTP2_MANIFEST_ROOT}/grpo_tool_dataset.with_relative_audio.jsonl" \
+    --out_dir "$MTP2_EMBED_ROOT"
 echo "=== Step 5 Done ==="
 
 # --- Step 6: Final verification ---
 echo ""
 echo "=== Step 6: Verify embeds ==="
-python3 synthetic_dataset/check_audio.py
+python3 scripts/data/synthetic/check_audio.py
 
 echo "All done!"

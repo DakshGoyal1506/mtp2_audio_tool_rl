@@ -1,12 +1,28 @@
 import json
 import os
 import subprocess
+import sys
+from pathlib import Path
 
-jsonl_file = "/home/speech-nlp-cse/24m0756/abhishek/grpo_dataset/output/grpo_tool_dataset.jsonl"
-source_base_dir = "/home/speech-nlp-cse/24m0756/abhishek/grpo_dataset/audioset/mnt/fast/nobackup/scratch4weeks/xm00178/WavCaps/data/waveforms/AudioSet_SL_flac"
-target_dir = "/home/speech-nlp-cse/24m0756/abhishek/grpo_dataset/final_audio"
 
-os.makedirs(target_dir, exist_ok=True)
+def require_env(name):
+    value = os.environ.get(name)
+    if not value:
+        print(f"Error: set {name} before running this script.", file=sys.stderr)
+        sys.exit(1)
+    return value
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+MANIFEST_ROOT = Path(os.environ.get("MTP2_MANIFEST_ROOT", REPO_ROOT / "manifests"))
+AUDIO_ROOT = Path(require_env("MTP2_AUDIO_ROOT"))
+OUTPUT_ROOT = Path(require_env("MTP2_OUTPUT_ROOT"))
+
+jsonl_file = MANIFEST_ROOT / "grpo_tool_dataset.jsonl"
+source_base_dir = AUDIO_ROOT
+target_dir = OUTPUT_ROOT / "final_audio"
+
+target_dir.mkdir(parents=True, exist_ok=True)
 
 with open(jsonl_file, "r") as f:
     for line in f:
@@ -17,8 +33,8 @@ with open(jsonl_file, "r") as f:
         basename = os.path.basename(id_str)
         filename_no_ext = os.path.splitext(basename)[0]
 
-        source_path = os.path.join(source_base_dir, basename)
-        target_path = os.path.join(target_dir, f"{filename_no_ext}.wav")
+        source_path = source_base_dir / basename
+        target_path = target_dir / f"{filename_no_ext}.wav"
 
         if not os.path.exists(source_path):
             print(f"Warning: source file not found: {source_path}")
@@ -30,9 +46,9 @@ with open(jsonl_file, "r") as f:
         cmd = [
             "ffmpeg",
             "-y", # Overwrite output if it exists
-            "-i", source_path,
+            "-i", str(source_path),
             "-ar", "16000",
-            target_path
+            str(target_path)
         ]
 
         # Suppress ffmpeg output to keep logs clean
