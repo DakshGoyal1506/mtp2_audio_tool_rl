@@ -1,0 +1,25 @@
+Repo key: desta-grpo-toolrl
+Original local path: /home/speech-nlp-cse/24m0756/abhishek/Desta_grpo/ToolRL
+
+## Remotes
+origin	https://github.com/qiancheng0/ToolRL.git (fetch)
+origin	https://github.com/qiancheng0/ToolRL.git (push)
+
+## Current branch
+main
+
+## HEAD commit
+8cee13ec0ca72f0461da372a93a6fd8140dbb840
+
+## Detached HEAD
+no
+
+## Latest tag reachable
+none
+
+## Status short
+ M requirements.txt
+ M verl/utils/tokenizer.py
+ M verl/workers/fsdp_workers.py
+?? audio_grpo/
+?? dataset/audio_grpo/

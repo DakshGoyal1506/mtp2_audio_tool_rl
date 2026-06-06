@@ -1,0 +1,89 @@
+Repo key: audio-maestro-main
+Original local path: /home/speech-nlp-cse/24m0756/abhishek/Audio-Maestro
+
+## Remotes
+origin	https://github.com/gary920209/Audio-Maestro.git (fetch)
+origin	https://github.com/gary920209/Audio-Maestro.git (push)
+
+## Current branch
+main
+
+## HEAD commit
+ba443a215573ff2d5b85e8efbec268343b40baa2
+
+## Detached HEAD
+no
+
+## Latest tag reachable
+none
+
+## Status short
+ M audio_maestro/audio_copilot.py
+ D image/Results.png
+ D image/framework.png
+ M scripts/prompts.py
+ M scripts/tool_execute_gemini.py
+?? .gitignore
+?? audio_maestro/__pycache__/
+?? checkpoints/
+?? evaluation.py
+?? extract_embeds.sh
+?? extract_embeds_73163.err
+?? extract_embeds_73163.log
+?? extract_embeds_73167.err
+?? extract_embeds_73167.log
+?? extract_embeds_73173.err
+?? extract_embeds_73173.log
+?? extract_embeds_offline.sh
+?? gpu_me.sh
+?? grpo/
+?? grpo2/
+?? grpo_slurm_73089.log
+?? grpo_slurm_73109.log
+?? grpo_slurm_73138.log
+?? grpo_slurm_73178.log
+?? grpo_slurm_73221.log
+?? grpo_slurm_73231.log
+?? grpo_slurm_73233.log
+?? grpo_slurm_73287.log
+?? grpo_slurm_73291.log
+?? grpo_slurm_73309.log
+?? grpo_slurm_73459.log
+?? grpo_slurm_73480.log
+?? grpo_slurm_73595.log
+?? grpo_slurm_73761.log
+?? grpo_slurm_73988.log
+?? grpo_slurm_74204.log
+?? grpo_slurm_74211.log
+?? grpo_slurm_74215.log
+?? grpo_slurm_74218.log
+?? inference/
+?? inference_parallel_slurm_74854.log
+?? inference_parallel_slurm_74864.log
+?? inference_parallel_slurm_74867.log
+?? inference_parallel_slurm_74976.log
+?? inference_parallel_slurm_74991.log
+?? inference_run_slurm.log
+?? inference_run_slurm_74656.log
+?? inference_run_slurm_74664.log
+?? inference_run_slurm_74809.log
+?? inference_run_slurm_74829.log
+?? internet.sh
+?? logs/
+?? mmau-test-mini-cached.json
+?? mmau-test-mini.json
+?? old_logs/
+?? precomputed_embeds/
+?? requirements-clean.txt
+?? requirments.txt
+?? results/
+?? run.sh
+?? scripts/__pycache__/
+?? scripts/agentic/
+?? scripts/extract_embeddings.py
+?? scripts/models/
+?? scripts/test_embed_pipeline.py
+?? scripts/tool_execute.py
+?? test_error_cases.py
+?? test_tools.py
+?? wandb/

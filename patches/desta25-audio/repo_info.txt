@@ -1,0 +1,22 @@
+Repo key: desta25-audio
+Original local path: /home/speech-nlp-cse/24m0756/abhishek/DeSTA2.5-Audio
+
+## Remotes
+origin	https://github.com/kehanlu/DeSTA2.5-Audio.git (fetch)
+origin	https://github.com/kehanlu/DeSTA2.5-Audio.git (push)
+
+## Current branch
+main
+
+## HEAD commit
+e9b28ffd97c559eb178096b853321a1bbe5d97cf
+
+## Detached HEAD
+no
+
+## Latest tag reachable
+none
+
+## Status short
+ M desta/models/modeling_desta25.py
+?? test.py

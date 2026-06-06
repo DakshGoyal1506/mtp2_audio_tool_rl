@@ -1,0 +1,87 @@
+# ============================================================
+# GRPO Training Configuration v3 — Fixes for KL divergence / entropy explosion
+# ============================================================
+# Changes from optimized_v2.yaml:
+#   1. beta 0.05→0.3 (stronger KL penalty prevents policy divergence)
+#   2. learning_rate 1e-4→3e-5 (less aggressive updates)
+#   3. max_grad_norm 2.0→0.5 (tighter gradient clipping to catch spikes)
+#   4. lr_scheduler_type: cosine (decay LR over training for stability)
+#   5. warmup_steps 20→50 (longer warmup for stability)
+#   6. max_new_tokens 4096→2048 (halve max gen length — reduces wallclock on degenerate samples)
+#   7. lora_rank 64→32 (reduce capacity to prevent overfitting/divergence)
+#   8. Added kl_threshold: 5.0 (skip gradient update if per-batch KL exceeds this)
+
+# --- Model ---
+model_name: "desta-8b"
+model_hf_name: "DeSTA-ntu/DeSTA2.5-Audio-Llama-3.1-8B"
+
+# --- Data ---
+data_file: "../mmau-test-mini-cached.json"
+splits_dir: "splits_v2"          # reuse v2 splits for comparability
+train_ratio: 0.60
+eval_ratio: 0.10
+data_seed: 42
+
+# --- LoRA ---
+lora_rank: 32                    # was 64 — reduced to prevent divergence
+lora_alpha: 32                   # keep alpha == rank
+lora_dropout: 0.05
+lora_target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+
+# --- GRPO ---
+G: 16
+beta: 0.3                        # Strong KL penalty — prevents policy drift
+epsilon: 0.2                     # PPO clipping epsilon
+kl_threshold: 3.0                # skip gradient if batch KL > this (was 5.0)
+
+# --- Reward weights (must sum to 1.0) ---
+format_reward_weight: 0.10
+correctness_reward_weight: 0.60
+option_mention_weight: 0.15
+tool_bonus_weight: 0.15
+forced_tool_fraction: 0.0
+
+# --- Generation ---
+temperature: 1.0                 # was 1.1 — lower temp reduces reward variance
+top_p: 0.95
+max_new_tokens: 2048
+do_sample: true
+
+# --- Training ---
+num_gpus: 4
+mixed_precision: bf16
+batch_size: 8
+gradient_checkpointing: true
+grad_accumulation_steps: 4       # effective batch = 2 * 4 = 8 questions per step
+learning_rate: 3e-6              # conservative — actual peak ~3e-6 after scheduler
+weight_decay: 0.01
+max_grad_norm: 0.3               # tight clipping catches divergence spikes early
+epochs: 15
+warmup_steps: 100                # long warmup for gradual learning
+lr_scheduler_type: "cosine"      # was constant_with_warmup — decay prevents late-stage blowup
+
+# --- Output ---
+output_dir: "checkpoints/grpo-desta-v3"
+log_every_n_steps: 1
+
+# --- WandB ---
+wandb:
+  project: "grpo-desta-audio"
+  run_name: null
+  dir: "wandb"
+  monitor_interval_s: 30
+
+# --- LLM Judge ---
+judge_url: null
+judge_model: null
+
+# --- DeepSpeed ---
+deepspeed_stage: 2
+precomputed_embed_dir: /home/speech-nlp-cse/24m0756/abhishek/Audio-Maestro/precomputed_embeds

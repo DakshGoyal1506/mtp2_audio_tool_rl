@@ -1,0 +1,59 @@
+Repo key: audio-maestro-bak
+Original local path: /home/speech-nlp-cse/24m0756/abhishek/Audio-Maestro-bak
+
+## Remotes
+origin	https://github.com/gary920209/Audio-Maestro.git (fetch)
+origin	https://github.com/gary920209/Audio-Maestro.git (push)
+
+## Current branch
+main
+
+## HEAD commit
+ba443a215573ff2d5b85e8efbec268343b40baa2
+
+## Detached HEAD
+no
+
+## Latest tag reachable
+none
+
+## Status short
+ M audio_maestro/audio_copilot.py
+ D image/Results.png
+ D image/framework.png
+ M scripts/prompts.py
+ M scripts/tool_execute_gemini.py
+?? .gitignore
+?? audio_maestro/__pycache__/
+?? evaluation.py
+?? gpu_me.sh
+?? gpu_stat.log
+?? grpo/
+?? grpo_slurm_70408.log
+?? grpo_slurm_70433.log
+?? grpo_slurm_70499.log
+?? grpo_slurm_70736.log
+?? grpo_slurm_70779.log
+?? grpo_slurm_70786.log
+?? grpo_slurm_70879.log
+?? grpo_slurm_70903.log
+?? grpo_slurm_70917.log
+?? grpo_slurm_70921.log
+?? grpo_slurm_70926.log
+?? grpo_slurm_72370.log
+?? grpo_slurm_72396.log
+?? internet.sh
+?? logs/
+?? mmau-test-mini-cached.json
+?? mmau-test-mini.json
+?? requirements-clean.txt
+?? requirments.txt
+?? results/
+?? run.sh
+?? scripts/__pycache__/
+?? scripts/agentic/
+?? scripts/models/
+?? scripts/tool_execute.py
+?? test_error_cases.py
+?? test_tools.py
+?? wandb/

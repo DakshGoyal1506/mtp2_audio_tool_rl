@@ -1,0 +1,77 @@
+# ============================================================
+# GRPO Training Configuration for Qwen2.5-Omni-7B
+# ============================================================
+# Usage:
+#   python grpo/train_grpo.py --config grpo/configs/qwen_omni.yaml
+#   torchrun --nproc_per_node=4 grpo/train_grpo.py --config grpo/configs/qwen_omni.yaml
+
+# --- Model ---
+model_name: "qwen-omni-7b"
+model_hf_name: "Qwen/Qwen2.5-Omni-7B"
+
+# --- Data ---
+data_file: "../mmau-test-mini-cached.json"
+splits_dir: "splits"
+train_ratio: 0.30
+eval_ratio: 0.10
+data_seed: 42
+
+# --- LoRA ---
+# Applied to the Thinker backbone (Qwen2 LLM).
+# Talker is disabled entirely to save ~2 GB VRAM.
+lora_rank: 16
+lora_alpha: 16
+lora_dropout: 0.05
+lora_target_modules:
+  - q_proj
+  - v_proj
+  - k_proj
+
+# --- GRPO ---
+G: 8                           # lower than DeSTA (31 GB base model → less headroom)
+beta: 0.5
+eps: 1e-8
+format_reward_weight: 0.2
+correctness_reward_weight: 0.8
+forced_tool_fraction: 0.0
+
+# --- Generation ---
+temperature: 1.1
+top_p: 0.95
+max_new_tokens: 2048
+do_sample: true
+
+# --- Training ---
+num_gpus: 2
+mixed_precision: bf16
+batch_size: 1
+gradient_checkpointing: true
+grad_accumulation_steps: 8
+learning_rate: 2.0e-6
+weight_decay: 0.01
+max_grad_norm: 0.5
+epochs: 5
+warmup_steps: 50
+
+# --- Output ---
+output_dir: "checkpoints/grpo-qwen-omni-run1"
+save_every_n_epochs: 1
+log_every_n_steps: 10
+
+# --- WandB ---
+wandb:
+  project: "grpo-qwen-omni"
+  run_name: null
+  dir: "wandb"
+  monitor_interval_s: 30
+
+# --- LLM Judge (optional) ---
+judge_url: null
+judge_model: null
+
+# --- DeepSpeed ---
+deepspeed_stage: 2
+
+# --- Qwen-specific ---
+# No precomputed_embed_dir — Qwen uses raw audio files directly
+# precomputed_embed_dir: null

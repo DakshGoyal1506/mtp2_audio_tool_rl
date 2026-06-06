@@ -1,0 +1,133 @@
+Repo key: desta-grpo
+Original local path: /home/speech-nlp-cse/24m0756/abhishek/Desta_grpo
+
+## Remotes
+origin	https://github.com/gary920209/Audio-Maestro.git (fetch)
+origin	https://github.com/gary920209/Audio-Maestro.git (push)
+
+## Current branch
+main
+
+## HEAD commit
+ba443a215573ff2d5b85e8efbec268343b40baa2
+
+## Detached HEAD
+no
+
+## Latest tag reachable
+none
+
+## Status short
+ D README.md
+ M audio_maestro/audio_copilot.py
+ D image/Results.png
+ D image/framework.png
+ M scripts/prompts.py
+ M scripts/tool_execute_gemini.py
+?? .gitignore
+?? .vscode/
+?? ToolRL/
+?? __pycache__/
+?? analyze_tool_comparison.py
+?? audio_maestro/__pycache__/
+?? biased_verified_creation/
+?? build_flash_attn.sh
+?? checkpoints/
+?? container_job_97883.err
+?? container_job_97883.log
+?? cuda12.sif
+?? dataset.tar
+?? dataset/
+?? demo_output.txt
+?? demo_tool_mask.py
+?? desta_forced_multi_vs_single.json
+?? desta_vllm/
+?? diag_embed.py
+?? dummy_data.json
+?? evaluation.py
+?? expts/
+?? extract_embeds.sh
+?? extract_embeds_offline.sh
+?? fake_group
+?? fake_passwd
+?? fix_flash_attn.sh
+?? forced_dir/
+?? gemma.yml
+?? gemma4.sif
+?? getip.sh
+?? gpu_me.sh
+?? grpo/
+?? grpo_llm_agentic/
+?? "grpo_single_phase copy/"
+?? grpo_single_phase/
+?? "grpo_single_phase_llm copy 2/"
+?? "grpo_single_phase_llm copy/"
+?? grpo_single_phase_llm/
+?? grpo_single_phase_llm_decoupled/
+?? grpo_trainer.py
+?? hallucination/
+?? image(6).png
+?? infer_101490_direct_base_slurm_104414.log
+?? inference/
+?? install_flash_attn.sh
+?? install_vllm.sh
+?? interactive.sh
+?? internet.sh
+?? judge-867777.tar
+?? judge_logs/
+?? judge_tool_empirical.py
+?? judge_tool_helpfulness.py
+?? load_test.py
+?? logs/
+?? logs2/
+?? metric_93279_cosine_decay.log
+?? mmau-test-mini-cached-top3.json
+?? mmau-test-mini-cached.json
+?? mmau-test-mini.json
+?? mmau_af3_biased.json
+?? mmau_af3_biased_eval_results.json
+?? mmau_af3_biased_forced_single_turn.json
+?? mmau_desta_biased_single_pass.json
+?? my_jobs.sh
+?? old_grpo_logs/
+?? plot_comparison_table.py
+?? plot_grpo_metrics.py
+?? precomputed_embeds/
+?? probe_97874.out
+?? prompts.py
+?? results/
+?? run.sh
+?? scripts/__init__.py
+?? scripts/__pycache__/
+?? scripts/diag_embed_gpu.py
+?? scripts/extract_embeddings.py
+?? scripts/models/
+?? scripts/podman_gpu_test_job.sh
+?? scripts/run_diag.sh
+?? scripts/runtime_matrix_gpu_test.sh
+?? scripts/select_top_tools.py
+?? scripts/snapshot_expt.sh
+?? scripts/test_embed_pipeline.py
+?? scripts/tool_execute.py
+?? selectio_tools.log
+?? synthetic_dataset/
+?? test_a40.log
+?? test_a40.sh
+?? test_bpe_boundary.py
+?? test_chat_template_mask.py
+?? test_error_cases.py
+?? test_gpt_oss.py
+?? test_qwen.py
+?? test_qwen2.py
+?? test_qwen3.py
+?? test_qwen_simple.py
+?? test_qwen_simple2.py
+?? test_tools.py
+?? tool_empirical_results.json
+?? tool_helpfulness_results.json
+?? training_logs/
+?? utils/
+?? verify_top3_tool_capablity.py
+?? vllm_install.sh
+?? wandb/
+?? wavecaps/

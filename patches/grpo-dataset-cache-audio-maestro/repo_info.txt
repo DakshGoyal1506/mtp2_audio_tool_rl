@@ -1,0 +1,22 @@
+Repo key: grpo-dataset-cache-audio-maestro
+Original local path: /home/speech-nlp-cse/24m0756/abhishek/grpo_dataset/cache_tools/Audio-Maestro
+
+## Remotes
+origin	https://github.com/gary920209/Audio-Maestro.git (fetch)
+origin	https://github.com/gary920209/Audio-Maestro.git (push)
+
+## Current branch
+main
+
+## HEAD commit
+ba443a215573ff2d5b85e8efbec268343b40baa2
+
+## Detached HEAD
+no
+
+## Latest tag reachable
+none
+
+## Status short
+ M audio_maestro/audio_copilot.py
+?? audio_maestro/__pycache__/

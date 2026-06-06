@@ -1,0 +1,85 @@
+# ============================================================
+# GRPO Training Configuration v2 — Fixes for reward stagnation
+# ============================================================
+# Changes from optimized.yaml:
+#   1. LoRA rank 16→64, expanded target modules (o_proj, gate, up, down)
+#   2. beta 0.5→0.05 (allow policy to diverge more from reference)
+#   3. learning_rate 5e-5→1e-4
+#   4. max_grad_norm 0.5→2.0 (less gradient clipping)
+#   5. lr_scheduler_type: constant_with_warmup (no cosine decay)
+#   6. train_ratio 0.30→0.60 (more training data)
+#   7. epochs 5→15 (more training steps)
+#   8. warmup_steps 50→20 (shorter warmup given constant LR)
+
+# --- Model ---
+model_name: "desta-8b"
+model_hf_name: "DeSTA-ntu/DeSTA2.5-Audio-Llama-3.1-8B"
+
+# --- Data ---
+data_file: "../mmau-test-mini-cached.json"
+splits_dir: "splits_v2"          # separate splits dir so we don't overwrite old splits
+train_ratio: 0.60                # 60% for training (was 30%)
+eval_ratio: 0.10
+data_seed: 42
+
+# --- LoRA (expanded) ---
+lora_rank: 64                    # was 16 — 4x more capacity
+lora_alpha: 64                   # keep alpha == rank (standard scaling)
+lora_dropout: 0.05
+lora_target_modules:             # was only q/k/v — now covers full attention + MLP
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+
+# --- GRPO ---
+G: 16
+beta: 0.05                       # was 0.5 — 10x lower KL penalty lets policy learn faster
+eps: 1e-8
+format_reward_weight: 0.2
+correctness_reward_weight: 0.8
+forced_tool_fraction: 0.0
+
+# --- Generation ---
+temperature: 1.1
+top_p: 0.95
+max_new_tokens: 4096
+do_sample: true
+
+# --- Training ---
+num_gpus: 4
+mixed_precision: bf16
+batch_size: 2                    # reduced from 4 due to larger LoRA rank
+gradient_checkpointing: true
+grad_accumulation_steps: 4       # effective batch = 2 * 4 = 8 questions per step
+learning_rate: 1.0e-4            # was 5e-5 — 2x higher
+weight_decay: 0.01
+max_grad_norm: 2.0               # was 0.5 — 4x less aggressive clipping
+epochs: 15                       # was 5 — 3x more training
+warmup_steps: 20                 # shorter warmup for constant LR
+lr_scheduler_type: "constant_with_warmup"  # NEW: no cosine decay
+
+# --- Output ---
+output_dir: "checkpoints/grpo-desta-v2"
+save_every_n_epochs: 3
+log_every_n_steps: 1
+eval_every_n_steps: 20
+num_completions_to_print: 5
+
+# --- WandB ---
+wandb:
+  project: "grpo-desta-audio"
+  run_name: null
+  dir: "wandb"
+  monitor_interval_s: 30
+
+# --- LLM Judge ---
+judge_url: null
+judge_model: null
+
+# --- DeepSpeed ---
+deepspeed_stage: 2
+precomputed_embed_dir: /home/speech-nlp-cse/24m0756/abhishek/Audio-Maestro/precomputed_embeds

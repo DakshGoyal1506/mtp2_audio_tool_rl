@@ -1,0 +1,96 @@
+# ============================================================
+# GRPO Training Configuration v4 — LLM-as-Judge, Path-Dependent
+# ============================================================
+# Path A (no tool):   0.6*answer + 0.3*think + 0.1*format
+# Path B (with tool): 0.5*answer + 0.15*think1 + 0.1*tool + 0.15*think2 + 0.1*format
+# Each dimension scored 1-5 by judge, normalized by /5.
+# Judge: Qwen3.5-27B served via SGLang (external, not managed by trainer).
+
+# --- Model ---
+model_name: "desta-8b"
+model_hf_name: "DeSTA-ntu/DeSTA2.5-Audio-Llama-3.1-8B"
+
+# --- Data (reuse grpo_single_phase splits) ---
+data_file: "../mmau-test-mini-cached.json"
+splits_dir: "splits_v2"
+train_ratio: 0.60
+eval_ratio: 0.10
+data_seed: 42
+
+# --- LoRA ---
+lora_rank: 64
+lora_alpha: 64
+lora_dropout: 0.05
+lora_target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+
+# --- GRPO ---
+G: 8
+num_iterations: 2 # 2
+beta: 0.03 # earlier 0.5
+epsilon: 0.2
+kl_threshold: 3.0
+w_acc: 1.0
+w_tool: 0.15
+multi_objective_aggregation: "normalize_then_sum"
+scale_rewards: "group"
+
+# --- Heuristic reward weights ---
+format_reward_weight: 0.10
+correctness_reward_weight: 0.90
+option_mention_weight: 0.0
+tool_bonus_weight: 0.10
+
+# --- Path-dependent reward weights (each must sum to 1.0) ---
+path_a_weights:
+  answer: 0.60
+  think:  0.30
+  format: 0.10
+
+path_b_weights:
+  answer: 0.35
+  think1: 0.15
+  tool:   0.25
+  think2: 0.15
+  format: 0.10
+
+# --- Generation ---
+temperature: 0.7
+top_p: 0.95
+max_new_tokens: 2048
+
+# --- Precomputed embeddings ---
+precomputed_embed_dir: "precomputed_embeds"
+
+# --- Training ---
+num_gpus: 4                   # all GPUs for training; judge runs on separate node
+batch_size: 4
+eval_batch_size: 4
+grad_accumulation_steps: 8
+learning_rate: 5e-5 # 1.0e-5
+max_grad_norm: 2 # earlier 0.3
+warmup_steps: 20
+weight_decay: 0.01
+lr_scheduler_type: "cosine_with_restarts"
+epochs: 20
+log_every_n_steps: 1
+gradient_checkpointing: true
+evals_per_epoch: 2
+mixed_precision: "bf16"
+
+# --- Output ---
+output_dir: "checkpoints/grpo-desta-llm"
+
+# --- LLM Judge (external SGLang server) ---
+judge_model: "google/gemma-4-26B-A4B-it"
+judge_host: "192.168.1.31"
+judge_port: 8000
+judge_max_tokens: 8192             # max completion tokens for judge responses
+judge_max_workers: 32             # concurrent threads for judge API calls
+judge_reasoning_effort: "medium"     # keep analysis brief so final JSON isn't truncated

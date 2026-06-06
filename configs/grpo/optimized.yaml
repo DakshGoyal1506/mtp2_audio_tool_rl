@@ -1,0 +1,75 @@
+# ============================================================
+# GRPO Training Configuration for DeSTA2.5-Audio Tool-Use
+# ============================================================
+
+# --- Model ---
+model_name: "desta-8b"          # 'desta-8b' | 'desta-3b' | 'desta-1b' | full HF path
+model_hf_name: "DeSTA-ntu/DeSTA2.5-Audio-Llama-3.1-8B"
+
+# --- Data ---
+data_file: "../mmau-test-mini-cached.json"
+splits_dir: "splits"            # where train/eval/test JSON splits are stored
+train_ratio: 0.30               # 10% of each task for training
+eval_ratio: 0.10                # 10% of each task for eval
+data_seed: 42
+
+# --- LoRA ---
+lora_rank: 16
+lora_alpha: 16
+lora_dropout: 0.05
+lora_target_modules:
+  - q_proj
+  - v_proj
+  - k_proj
+
+# --- GRPO ---
+G: 16                         # group size: number of completions sampled per question
+beta: 0.5                      # KL penalty coefficient (Schulman KL, always >= 0)
+eps: 1e-8                       # epsilon for advantage normalization
+format_reward_weight: 0.2       # weight for format reward
+correctness_reward_weight: 0.8  # weight for correctness reward
+forced_tool_fraction: 0.0       # fraction of G slots using forced-tool path (diversity fix)
+                                # 0.5 → half forced (synthetic phase-1 + real phase-2)
+                                # 0.0 → disable (pure free sampling, original behaviour)
+
+# --- Generation ---
+temperature: 1.1
+top_p: 0.95
+max_new_tokens: 2048
+do_sample: true
+
+# --- Training ---
+num_gpus: 2                 # passed to torchrun --nproc_per_node
+mixed_precision: bf16           # bf16 recommended for A100; options: no | fp16 | bf16
+batch_size: 4                   # questions per GPU per step (effective = batch_size * G completions)
+gradient_checkpointing: true    # saves ~40% activation memory at ~30% compute cost
+grad_accumulation_steps: 2
+learning_rate: 5.0e-5
+weight_decay: 0.01
+max_grad_norm: 0.5
+epochs: 5
+warmup_steps: 50
+
+# --- Output ---
+output_dir: "checkpoints/grpo-desta-run2"
+save_every_n_epochs: 1
+log_every_n_steps: 1
+eval_every_n_steps: 10          # run eval every N global steps (0 = end-of-epoch only)
+num_completions_to_print: 5     # number of sample completions to print per log step
+
+# --- WandB (offline — sync later with: wandb sync wandb/<run_dir>) ---
+wandb:
+  project: "grpo-desta-audio"
+  run_name: null               # auto-generated if null
+  dir: "wandb"                 # local dir for offline run artefacts
+  monitor_interval_s: 30       # how often to log GPU/CPU/RAM (seconds)
+
+# --- LLM Judge (optional) ---
+# Set env vars LLM_JUDGE_URL and LLM_JUDGE_MODEL to enable judge scoring.
+# If unset, falls back to exact string matching for correctness reward.
+judge_url: null      # override with env var LLM_JUDGE_URL
+judge_model: null    # override with env var LLM_JUDGE_MODEL
+
+# --- DeepSpeed ---
+deepspeed_stage: 2              # ZeRO-2; set to 0 to disable
+precomputed_embed_dir: /home/speech-nlp-cse/24m0756/abhishek/Audio-Maestro/precomputed_embeds

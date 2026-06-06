@@ -1,0 +1,113 @@
+# ============================================================
+# GRPO Training Configuration — vLLM-Accelerated Rollouts
+# ============================================================
+# Same training recipe as grpo_single_phase_llm/configs/optimized_v4.yaml
+# but uses DeSTAVLLMEngine for fast batched rollout generation.
+#
+# Architecture (TRL colocate mode):
+#   - N GPUs total, one accelerate process per GPU (DDP)
+#   - Each GPU runs BOTH a vLLM rollout engine and HF training model
+#   - vLLM sleep mode swaps weights+cache to CPU during gradient steps
+#   - LoRA weights synced HF → vLLM per-rank inside _generate
+
+# --- Model ---
+model_name: "desta-8b"
+model_hf_name: "DeSTA-ntu/DeSTA2.5-Audio-Llama-3.1-8B"
+
+# --- Data (reuse grpo_single_phase splits) ---
+data_file: "../mmau-test-mini-cached.json"
+splits_dir: "splits_v2"
+train_ratio: 0.60
+eval_ratio: 0.10
+data_seed: 42
+
+# --- LoRA ---
+lora_rank: 64
+lora_alpha: 64
+lora_dropout: 0.05
+lora_target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+
+# --- GRPO ---
+G: 8
+num_iterations: 2
+beta: 0.03
+epsilon: 0.2
+kl_threshold: 3.0
+
+# --- Path-dependent reward weights ---
+path_a_weights:
+  answer: 0.55
+  think:  0.35
+  format: 0.10
+
+path_b_weights:
+  answer: 0.50
+  think1: 0.15
+  tool:   0.15
+  think2: 0.10
+  format: 0.10
+
+# --- Generation ---
+temperature: 0.7
+top_p: 0.95
+max_new_tokens: 2048
+seed: 42
+
+# --- Precomputed embeddings ---
+precomputed_embed_dir: "precomputed_embeds"
+
+# --- vLLM engine settings (colocate mode) ---
+# Each GPU runs its own vLLM instance alongside the HF training model.
+# gpu_memory_utilization is fraction of GPU memory reserved for vLLM —
+# the rest is for the HF model + activations + optimizer (LoRA only).
+# Sleep mode swaps vLLM weights+cache to CPU during gradient steps so
+# the training model has room for backward pass.
+#
+# Memory math (48GB L40S): Llama-8B bf16 weights = ~16GB. vLLM at 0.45
+# util ~= 21.6GB total. After sleep level=2, ~5-7GB stays pinned
+# (compiled kernels, NCCL buffers); on wake we re-alloc ~14-16GB.
+# enforce_eager=true skips CUDA graph capture, saving ~1-3GB stuck.
+# This leaves ~30GB free during training for HF model + optimizer.
+vllm_tensor_parallel: 1
+vllm_gpu_memory_utilization: 0.45
+vllm_max_model_len: 4096
+vllm_enable_sleep_mode: true
+vllm_enforce_eager: true
+
+# --- Training ---
+# batch_size is per-device (per GPU). With G completions per prompt, each
+# GPU sees batch_size * G completions per micro-batch. Keep small for
+# colocate mode since HF model + vLLM share each GPU.
+batch_size: 1
+eval_batch_size: 8
+grad_accumulation_steps: 4
+learning_rate: 5e-5
+max_grad_norm: 2
+warmup_steps: 20
+weight_decay: 0.01
+lr_scheduler_type: "cosine_with_restarts"
+epochs: 10
+log_every_n_steps: 1
+gradient_checkpointing: true
+mixed_precision: "bf16"
+
+# --- Negative tool injection ---
+negative_tool_ratio: 0.3
+
+# --- Output ---
+output_dir: "checkpoints/grpo-desta-vllm"
+
+# --- LLM Judge (external SGLang server) ---
+judge_model: "google/gemma-4-26B-A4B-it"
+judge_host: "192.168.1.17"
+judge_port: 8000
+judge_max_tokens: 8192
+judge_max_workers: 32
+judge_reasoning_effort: "medium"

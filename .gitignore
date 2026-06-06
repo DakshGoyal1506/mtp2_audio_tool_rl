@@ -1,0 +1,123 @@
+# Python environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+.python-version
+
+# Python caches
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Notebook and editor state
+.ipynb_checkpoints/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Secrets and local config
+.env
+.env.*
+*.key
+*.pem
+*.secret
+*.credentials
+
+# Logs and job outputs
+**/logs/
+**/old_logs/
+**/training_logs/
+**/judge_logs/
+**/runs/
+**/outputs/
+**/results/
+**/wandb/
+nohup.out
+*.log
+*.out
+*.err
+slurm-*.out
+slurm-*.err
+
+# Datasets, audio, and data workspaces
+/data/
+/dataset/
+/datasets/
+/audio/
+/audios/
+/wavs/
+/grpo_dataset/
+/synthetic_dataset/
+/wavecaps/
+/cache_tools/
+**/test-mini-audios/
+**/precomputed_embeds/
+**/tool_results*/
+
+# Intentionally tracked code/config directories with data/dataset names
+!scripts/data/
+!scripts/data/**
+!scripts/data/cache_tools/
+!scripts/data/cache_tools/**
+!src/mtp2_audio_tool_rl/datasets/
+!src/mtp2_audio_tool_rl/datasets/**
+!configs/datasets/
+!configs/datasets/**
+
+# Checkpoints and model artifacts
+**/checkpoints/
+**/checkpoint*/
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.ckpt
+*.onnx
+*.gguf
+
+# Audio files
+*.wav
+*.flac
+*.mp3
+*.m4a
+*.ogg
+
+# Large arrays, manifests, and archives
+*.parquet
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.tar
+*.zip
+*.sif
+
+# Container and image artifacts
+*.img
+*.qcow2
+*.docker
+
+# Third-party clones accidentally copied into root
+Audio-Maestro/
+Audio-Maestro-bak/
+DeSTA2.5-Audio/
+Desta_grpo/
+toolRL/
+rlTool/
+af3_qwen_vllm_deployment/
+
+# Local OS files
+.DS_Store
+Thumbs.db

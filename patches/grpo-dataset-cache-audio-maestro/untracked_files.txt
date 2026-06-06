@@ -1,0 +1,2 @@
+audio_maestro/__pycache__/__init__.cpython-310.pyc
+audio_maestro/__pycache__/audio_copilot.cpython-310.pyc

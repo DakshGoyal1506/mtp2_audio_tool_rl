@@ -1,0 +1,125 @@
+diff --git a/requirements.txt b/requirements.txt
+index 83b00fe..690cb94 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -2,7 +2,7 @@ accelerate
+ codetiming
+ datasets
+ dill
+-flash-attn
++# flash-attn
+ hydra-core
+ numpy
+ pandas
+@@ -10,5 +10,5 @@ pybind11
+ ray
+ tensordict<0.6
+ transformers<4.48
+-vllm<=0.6.3
+-wandb
++# vllm<=0.6.3
++# wandb
+diff --git a/verl/utils/tokenizer.py b/verl/utils/tokenizer.py
+index b64b662..f70db4c 100644
+--- a/verl/utils/tokenizer.py
++++ b/verl/utils/tokenizer.py
+@@ -45,6 +45,7 @@ def hf_tokenizer(name_or_path, correct_pad_token=True, correct_gemma2=True, **kw
+         transformers.PreTrainedTokenizer: The pretrained tokenizer.
+ 
+     """
++    import json, os
+     from transformers import AutoTokenizer
+     if correct_gemma2 and isinstance(name_or_path, str) and 'gemma-2-2b-it' in name_or_path:
+         # the EOS token in gemma2 is ambiguious, which may worsen RL performance.
+@@ -52,6 +53,31 @@ def hf_tokenizer(name_or_path, correct_pad_token=True, correct_gemma2=True, **kw
+         warnings.warn('Found gemma-2-2b-it tokenizer. Set eos_token and eos_token_id to <end_of_turn> and 107.')
+         kwargs['eos_token'] = '<end_of_turn>'
+         kwargs['eos_token_id'] = 107
++
++    # DeSTA models store tokenizer in config.llm_model_id, not in the model dir itself.
++    # AutoConfig fails on desta25 without auto_map, so read config.json directly.
++    try:
++        config_path = None
++        if os.path.isdir(name_or_path):
++            candidate = os.path.join(name_or_path, 'config.json')
++            if os.path.isfile(candidate):
++                config_path = candidate
++        else:
++            # resolve from HF cache
++            from transformers.utils import cached_file
++            config_path = cached_file(name_or_path, 'config.json',
++                                      _raise_exceptions_for_missing_entries=False,
++                                      _raise_exceptions_for_connection_errors=False)
++        if config_path:
++            with open(config_path, 'r') as f:
++                raw_cfg = json.load(f)
++            if raw_cfg.get('model_type') == 'desta25' and raw_cfg.get('llm_model_id'):
++                llm_id = raw_cfg['llm_model_id']
++                warnings.warn(f'DeSTA model detected — loading tokenizer from {llm_id}')
++                name_or_path = llm_id
++    except Exception:
++        pass
++
+     tokenizer = AutoTokenizer.from_pretrained(name_or_path, **kwargs)
+     if correct_pad_token:
+         set_pad_token_id(tokenizer)
+diff --git a/verl/workers/fsdp_workers.py b/verl/workers/fsdp_workers.py
+index 53e8445..3824c13 100644
+--- a/verl/workers/fsdp_workers.py
++++ b/verl/workers/fsdp_workers.py
+@@ -33,6 +33,36 @@ from verl.utils.fs import copy_local_path_from_hdfs
+ from verl.utils.fsdp_utils import get_fsdp_wrap_policy, offload_fsdp_grad, init_fn, get_init_weight_context_manager
+ from verl.utils.fsdp_utils import offload_fsdp_optimizer, offload_fsdp_param_and_grad, load_fsdp_optimizer, \
+     load_fsdp_param_and_grad
++
++
++def _resolve_desta_model_path(model_path):
++    """If model_path points to a DeSTA model (model_type=='desta25'), return
++    the underlying LLM model id (e.g. 'DeSTA-ntu/Llama-3.1-8B-Instruct')
++    which AutoConfig/AutoModelForCausalLM can load directly.
++    DeSTA's model.safetensors only contains perception/connector weights;
++    the LLM backbone is loaded from config.llm_model_id."""
++    import json
++    try:
++        config_path = None
++        if os.path.isdir(model_path):
++            candidate = os.path.join(model_path, 'config.json')
++            if os.path.isfile(candidate):
++                config_path = candidate
++        else:
++            from transformers.utils import cached_file
++            config_path = cached_file(model_path, 'config.json',
++                                      _raise_exceptions_for_missing_entries=False,
++                                      _raise_exceptions_for_connection_errors=False)
++        if config_path:
++            with open(config_path, 'r') as f:
++                raw_cfg = json.load(f)
++            if raw_cfg.get('model_type') == 'desta25' and raw_cfg.get('llm_model_id'):
++                llm_id = raw_cfg['llm_model_id']
++                warnings.warn(f'DeSTA model detected — redirecting model load to {llm_id}')
++                return llm_id
++    except Exception:
++        pass
++    return model_path
+ from verl.utils.import_utils import import_external_libs
+ from verl.utils.model import compute_position_id_with_mask
+ from verl.utils.flops_counter import FlopsCounter
+@@ -125,6 +155,9 @@ class ActorRolloutRefWorker(Worker):
+         log_gpu_memory_usage('Before init from HF AutoModel', logger=logger)
+         local_path = copy_local_path_from_hdfs(model_path)
+ 
++        # DeSTA models: redirect to underlying LLM backbone
++        local_path = _resolve_desta_model_path(local_path)
++
+         # note that we have to create model in fp32. Otherwise, the optimizer is in bf16, which is incorrect
+         # TODO(zhangchi.usc1992): 1. support create from random initialized model. 2. Support init with FSDP directly
+         self.tokenizer = hf_tokenizer(local_path, trust_remote_code=trust_remote_code)
+@@ -545,6 +578,8 @@ class CriticWorker(Worker):
+         from torch import optim
+ 
+         local_path = copy_local_path_from_hdfs(config.model.path)
++        # DeSTA models: redirect to underlying LLM backbone
++        local_path = _resolve_desta_model_path(local_path)
+         # note that the tokenizer between actor and critic may be different. So override tokenizer info with actor info
+         # using random initialized model from any architecture. May not be the same as Actor.
+ 
