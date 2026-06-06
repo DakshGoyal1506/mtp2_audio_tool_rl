@@ -7,7 +7,7 @@ The repository is in a solid private-working state: setup is complete, lightweig
 ## Blocking Before Public Release
 
 - License review:
-  Confirm upstream licenses for Audio-Maestro and DeSTA2.5-Audio, then decide whether a top-level project license is compatible with extracted code, submodules, and patch overlays.
+  Confirm the unresolved Audio-Maestro license, clarify the ambiguous DeSTA2.5-Audio license signals, and then decide whether a top-level project license is compatible with extracted code, submodules, and patch overlays.
 - Patch secret-risk review:
   Manually review patch files that mention Gemini/API-key variables and rerun a dedicated secret scan before any visibility change.
 - Third-party patch strategy:
@@ -23,7 +23,8 @@ Review upstream licenses and decide top-level license
 - Priority: `blocking`
 - Scope: audit upstream license terms for Audio-Maestro, DeSTA2.5-Audio, ToolRL, and the interaction between extracted code and patch files.
 - Acceptance criteria: upstream license status is documented; redistribution constraints are understood; decision recorded on whether to add a top-level `LICENSE`.
-- Files likely involved: `pyproject.toml`, `docs/license_notes.md`, `docs/license_audit.md`, `third_party/README.md`, `.gitmodules`
+- Acceptance criteria: upstream license status is documented; Audio-Maestro remains resolved or explicitly unresolved; DeSTA2.5-Audio ambiguity is resolved; decision recorded on whether to add a top-level `LICENSE`.
+- Files likely involved: `pyproject.toml`, `docs/license_notes.md`, `docs/license_audit.md`, `docs/public_release_blockers.md`, `third_party/README.md`, `.gitmodules`
 
 ### Title
 Review patch files for secret-risk before public release

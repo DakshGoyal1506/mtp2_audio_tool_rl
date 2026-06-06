@@ -11,6 +11,12 @@ Before choosing a license, review the upstream licenses and reuse constraints fo
 - `ToolRL`
 - `AHa-Bench`
 
-Recommended next step: complete an upstream license review before deciding between MIT, Apache-2.0, a custom research-use license, or leaving the repository without a public code license.
+Current local status:
+
+- `ToolRL` is confirmed Apache-2.0 locally.
+- `Audio-Maestro` remains unresolved locally because no top-level `LICENSE`, `COPYING`, or `NOTICE` file was found.
+- `DeSTA2.5-Audio` remains ambiguous locally: `setup.py` advertises an MIT classifier, some files contain Apache-2.0 header text, and no top-level license file was found.
+
+Recommended next step: keep issue `#1` open and complete an upstream license review before deciding between MIT, Apache-2.0, a custom research-use license, or leaving the repository without a public code license.
 
 Until that review is finished, a private repository is the safest default.
