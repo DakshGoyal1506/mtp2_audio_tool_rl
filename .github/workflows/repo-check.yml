@@ -40,7 +40,13 @@ jobs:
         run: python scripts/data/validate_manifest.py manifests/example_manifest.jsonl
 
       - name: Lightweight pytest
-        run: PYTHONDONTWRITEBYTECODE=1 python -m pytest -q tests/test_validate_manifest.py tests/test_repo_setup_checks.py
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 python -m pytest -q \
+            tests/test_validate_manifest.py \
+            tests/test_repo_setup_checks.py \
+            tests/test_tool_call_schema.py \
+            tests/test_tool_use_reward.py \
+            tests/test_compare_baseline_grpo.py
 
       - name: Patch dry-run preview
         run: bash scripts/setup/apply_patches_preview.sh

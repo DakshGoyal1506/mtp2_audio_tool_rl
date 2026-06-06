@@ -1,0 +1,37 @@
+experiment:
+  name: grpo_tool_use_smoke
+  seed: 42
+
+paths:
+  manifest_path: ${oc.env:MTP2_MANIFEST_ROOT}/grpo_tool_use_smoke.jsonl
+  output_dir: ${oc.env:MTP2_OUTPUT_ROOT}/grpo_tool_use_smoke
+  log_dir: ${oc.env:MTP2_OUTPUT_ROOT}/logs/grpo_tool_use_smoke
+
+model:
+  base_model: placeholder
+  checkpoint: null
+
+tools:
+  enabled: true
+  allowed_tools:
+    - speaker_diarization
+    - emotion_recognition
+    - chord_recognition
+    - audio_captioning
+    - audio_event_detection
+
+reward:
+  answer_weight: 1.0
+  tool_validity_weight: 0.2
+  tool_helpfulness_weight: 0.3
+  unnecessary_tool_penalty: -0.2
+  invalid_tool_penalty: -0.4
+
+training:
+  mode: debug
+  max_steps: 5
+  max_samples: 20
+  batch_size: 1
+
+evaluation:
+  save_examples: true

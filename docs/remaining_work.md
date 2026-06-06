@@ -2,7 +2,7 @@
 
 ## Current State
 
-The repository is in a solid working state: setup is complete, lightweight CI is working, lightweight validation tests have been added, submodules are pinned, patch dry-runs pass, the dataset skeleton is in place, and a scoped MIT license now covers original repository-authored code and documentation. Public visibility is possible with third-party caveats documented, but there is still worthwhile follow-up work.
+The repository is in a solid working state: setup is complete, lightweight CI is working, lightweight validation tests have been added, submodules are pinned, patch dry-runs pass, the dataset skeleton is in place, and a scoped MIT license now covers original repository-authored code and documentation. A minimal GRPO/tool-use experiment layer now exists with a canonical tool-call schema, deterministic reward breakdown, smoke config, dry-run runner, and baseline-vs-GRPO comparison script. Public visibility is possible with third-party caveats documented, but there is still worthwhile follow-up work.
 
 ## Blocking Before Public Release
 
@@ -53,9 +53,25 @@ Create public-facing README and reproducibility guide
 Add lightweight unit tests for non-GPU utilities
 
 - Priority: `low`
-- Scope: extend the new lightweight test surface with more non-heavy utilities as they stabilize.
+- Scope: extend the new lightweight test surface with more non-heavy utilities as they stabilize. Current coverage includes manifest validation, repository setup helpers, tool-call schema validation, tool-use reward breakdowns, and baseline-vs-GRPO comparison.
 - Acceptance criteria: additional fast tests run in CI; tests do not require GPUs, checkpoints, or external datasets.
 - Files likely involved: `tests/`, `.github/workflows/repo-check.yml`, `scripts/data/validate_manifest.py`, `scripts/setup/check_repo_setup.py`
+
+### Title
+Connect GRPO/tool-use debug runner to a real training entrypoint
+
+- Priority: `high`
+- Scope: choose the canonical GRPO training entrypoint and wire `scripts/train/grpo/run_grpo_debug.sh` behind `RUN_ACTUAL_GRPO=1`.
+- Acceptance criteria: dry-run mode remains safe; actual mode runs only with external manifests/output roots; no outputs are written into Git.
+- Files likely involved: `scripts/train/grpo/run_grpo_debug.sh`, `configs/experiments/grpo_tool_use_smoke.yaml`, `src/mtp2_audio_tool_rl/grpo/`, `docs/grpo_tool_use_experiment.md`
+
+### Title
+Generate external baseline and GRPO prediction files
+
+- Priority: `high`
+- Scope: run baseline and GRPO inference externally using the smoke manifest format, then compare outputs with the new evaluation script.
+- Acceptance criteria: prediction JSONL files stay outside Git; comparison metrics are generated under an external output directory; result summaries use `docs/results_table_template.md`.
+- Files likely involved: `scripts/eval/compare_baseline_grpo.py`, `docs/results_table_template.md`, external manifests and output directories
 
 ### Title
 Decide whether audit/migration docs should remain in public repo
