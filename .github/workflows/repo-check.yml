@@ -1,0 +1,52 @@
+name: Repo Check
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  repo-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lightweight dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements/base.txt
+          python -m pip install -e .
+
+      - name: Repository safety check
+        run: python scripts/setup/check_repo_setup.py
+
+      - name: Import check
+        run: python scripts/setup/check_imports.py
+
+      - name: Validate example manifest
+        run: python scripts/data/validate_manifest.py manifests/example_manifest.jsonl
+
+      - name: Patch dry-run preview
+        run: bash scripts/setup/apply_patches_preview.sh
+
+      - name: Parent-repo large file check
+        run: |
+          large_files="$(find . -type f -size +10M -not -path './third_party/*' -print)"
+          if [ -n "$large_files" ]; then
+            echo "Files above 10 MB found outside third_party:"
+            echo "$large_files"
+            exit 1
+          fi
+          echo "No parent-repo files above 10 MB."
