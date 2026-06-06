@@ -1,52 +1,33 @@
 # MTP2 Audio Tool RL
 
-This repository contains extracted research code for tool-augmented audio-language model experiments, GRPO-style training, DeSTA/Audio-Maestro/ToolRL integrations, dataset construction, inference, evaluation, and patch preservation.
+MTP2 Audio Tool RL is a cleaned research-code repository for tool-augmented audio-language model experiments. It collects extracted project-owned code for GRPO-style training, DeSTA/Audio-Maestro/ToolRL integrations, dataset construction helpers, inference utilities, evaluation scripts, and patch-preservation metadata from a larger research workspace.
 
-It is a cleaned code repository extracted from a much larger research workspace. The goal of this repository is to preserve project-owned code and patch metadata while excluding bulky datasets, raw audio, checkpoints, logs, caches, and other generated artifacts.
+## Current Repository Status
 
-## Repository status
+This is a public research repository, not a polished reproduction package. Lightweight setup checks, manifest validation, CI, submodule pinning, and patch dry-runs are in place. Full end-to-end training reproduction, dataset reconstruction, and heavyweight test coverage are still incomplete.
 
-This repository is still being prepared for its first Git commit. Extraction, cleanup, and patch preservation have been completed for the initial safe code pass, but full documentation, import cleanup, environment curation, and reproducible training commands are still in progress.
+## What Is Included
 
-This codebase is research-oriented and should not be treated as production-ready.
-
-## What is included
-
-- Extracted Python packages under `src/mtp2_audio_tool_rl/`
-- Training and run scripts under `scripts/`
+- Python package code under `src/mtp2_audio_tool_rl/`
+- Run scripts and setup helpers under `scripts/`
 - Selected configs under `configs/`
-- Extracted tests under `tests/`
-- Audit, migration, and patch-planning docs under `docs/`
-- Patch preservation records under `patches/`
+- Tests and diagnostics that were safe to extract
+- Dataset skeleton files under `manifests/`
+- Preserved patch metadata under `patches/`
+- Pinned third-party submodules under `third_party/`
 
-Included code areas currently cover:
+## What Is Not Included
 
-- Canonical GRPO training code
-- GRPO single-phase variants
-- GRPO LLM-decoupled variants
-- Audio-Maestro GRPO variants
-- DeSTA vLLM inference and rollout helpers
-- Dataset construction and synthetic data scripts
-- Evaluation, diagnostics, prompts, and config files
+- Raw datasets or copied audio
+- Model checkpoints, weights, embeddings, or caches
+- Generated tool outputs, logs, or results
+- Applied third-party patch changes inside submodules
+- A complete paper-style reproducibility package
 
-## What is excluded
-
-This repository intentionally excludes:
-
-- Raw audio and copied audio subsets
-- Full datasets and large manifest dumps
-- Checkpoints, model weights, and embedding caches
-- Logs, Slurm outputs, `wandb/`, and generated results
-- Full third-party cloned repositories in the first commit
-- Local machine files, virtual environments, and editor state
-
-## Repository layout
+## Repository Layout
 
 ```text
 mtp2-audio-tool-rl/
-├── README.md
-├── .gitignore
-├── .gitattributes
 ├── configs/
 ├── docs/
 ├── manifests/
@@ -57,48 +38,66 @@ mtp2-audio-tool-rl/
 └── third_party/
 ```
 
-## External repositories and patches
+## Quickstart
 
-This repository does not vendor full upstream third-party repositories in the first commit. Instead, local tracked modifications are preserved under `patches/`, and future submodules or forks can be added after the first clean commit.
+Clone with submodules and install the lightweight base environment:
 
-Current preserved patch areas include:
+```bash
+git clone --recurse-submodules https://github.com/DakshGoyal1506/mtp2_audio_tool_rl.git
+cd mtp2_audio_tool_rl
+python3 -m pip install -e .
+python3 -m pip install -r requirements/base.txt
+```
 
-- `patches/audio-maestro-main/`
-- `patches/audio-maestro-bak/`
-- `patches/desta25-audio/`
-- `patches/desta-grpo/`
-- `patches/desta-grpo-toolrl/`
-- `patches/grpo-dataset-cache-audio-maestro/`
+Run the lightweight checks:
 
-See [third_party/README.md](/home/speech-nlp-cse/24m0756/mtp2-audio-tool-rl/third_party/README.md) and [docs/submodule_plan.md](/home/speech-nlp-cse/24m0756/mtp2-audio-tool-rl/docs/submodule_plan.md) for the planned upstream relationships.
+```bash
+python3 scripts/setup/check_repo_setup.py
+python3 scripts/setup/check_imports.py
+python3 scripts/data/validate_manifest.py manifests/example_manifest.jsonl
+bash scripts/setup/apply_patches_preview.sh
+```
 
-## Dataset policy
+More detail: [docs/quickstart.md](/home/speech-nlp-cse/24m0756/mtp2-audio-tool-rl/docs/quickstart.md)
 
-Datasets are intentionally kept outside Git. This repository should only commit tiny examples, schemas, and instructions that help reconstruct or reference external data.
+## Submodules
 
-Do not commit raw audio, copied audio folders, full JSON or JSONL datasets, large parquet exports, checkpoints, result dumps, or caches.
+This repository uses pinned submodules for upstream dependencies such as `Audio-Maestro`, `DeSTA2.5-Audio`, and `ToolRL`. They are checked out for reference and patch dry-run validation only. The repository does not claim that those third-party components are relicensed under the top-level MIT license.
 
-## Setup placeholder
+## Setup Checks
 
-Environment cleanup is still in progress. A curated `environment/` setup has not been finalized yet, and several extracted scripts still need dependency review and path cleanup before they can be treated as reproducible entry points.
+The current lightweight validation surface includes:
 
-For now, treat the repository as an extracted research snapshot with code and patch preservation first, setup standardization second.
+- repository safety and artifact checks
+- package import checks without heavy ML/audio dependencies
+- example manifest validation
+- patch dry-runs against pinned submodules
 
-## Reproducibility status
+These same checks are also used in CI. Full `pytest` is intentionally not part of the default path yet.
 
-Reproducibility is not complete yet. We have preserved code, configs, tests, and patch metadata, but the following are still in progress:
+## Dataset Policy
 
-- Import cleanup and package-level verification
-- Canonical environment selection
-- Reproducible training and inference commands
-- Dataset manifest curation
-- Third-party submodule or fork decisions
+Datasets stay outside Git. This repository includes only lightweight dataset metadata such as schemas, tiny fake/example manifests, and reconstruction notes. See [manifests/README.md](/home/speech-nlp-cse/24m0756/mtp2-audio-tool-rl/manifests/README.md) and [docs/dataset_reconstruction.md](/home/speech-nlp-cse/24m0756/mtp2-audio-tool-rl/docs/dataset_reconstruction.md).
 
-## GitHub target
+## Patch Preview Workflow
 
-- Owner: `DakshGoyal1506`
-- Repo: `mtp2_audio_tool_rl`
-- Preferred remote: `git@github.com:DakshGoyal1506/mtp2_audio_tool_rl.git`
-- HTTPS fallback: `https://github.com/DakshGoyal1506/mtp2_audio_tool_rl.git`
+Patch files under `patches/` preserve local tracked modifications from earlier working copies. The repository provides a dry-run-only preview script:
 
-Git initialization, the first commit, and any push should happen only after the remaining metadata, license review, and safety checks are complete.
+```bash
+bash scripts/setup/apply_patches_preview.sh
+```
+
+This checks whether selected preserved patches apply cleanly to the pinned submodules, but it does not apply them.
+
+## License And Third-Party Notice
+
+The top-level [LICENSE](/home/speech-nlp-cse/24m0756/mtp2-audio-tool-rl/LICENSE) is MIT for original repository-authored code, scripts, configuration, documentation, and scaffolding. Third-party submodules and patch-derived content retain their own terms or unresolved status. See [THIRD_PARTY_NOTICES.md](/home/speech-nlp-cse/24m0756/mtp2-audio-tool-rl/THIRD_PARTY_NOTICES.md).
+
+## Current Limitations
+
+- Full training reproduction is not turnkey yet.
+- Datasets, raw audio, checkpoints, and generated outputs are not included.
+- Heavy tests and model-dependent scripts require external assets and optional dependencies.
+- Patch overlays are preserved and validated, but not applied automatically.
+
+Reproducibility notes: [docs/reproducibility.md](/home/speech-nlp-cse/24m0756/mtp2-audio-tool-rl/docs/reproducibility.md)
