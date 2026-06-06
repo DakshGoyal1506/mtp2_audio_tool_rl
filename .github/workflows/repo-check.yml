@@ -26,6 +26,7 @@ jobs:
       - name: Install lightweight dependencies
         run: |
           python -m pip install --upgrade pip
+          python -m pip install pytest
           python -m pip install -r requirements/base.txt
           python -m pip install -e .
 
@@ -37,6 +38,9 @@ jobs:
 
       - name: Validate example manifest
         run: python scripts/data/validate_manifest.py manifests/example_manifest.jsonl
+
+      - name: Lightweight pytest
+        run: PYTHONDONTWRITEBYTECODE=1 python -m pytest -q tests/test_validate_manifest.py tests/test_repo_setup_checks.py
 
       - name: Patch dry-run preview
         run: bash scripts/setup/apply_patches_preview.sh
