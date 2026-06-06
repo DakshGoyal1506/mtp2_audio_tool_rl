@@ -37,6 +37,7 @@ DESTA_DIR="$(dirname "$PROJECT_DIR")/DeSTA2.5-Audio"
 echo "Working dir: $PROJECT_DIR"
 
 export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
+export VLLM_CACHE_ROOT="${VLLM_CACHE_ROOT:-$PROJECT_DIR/.cache/vllm}"
 
 IFILE="./gemma4.sif"
 if [ ! -f "$IFILE" ]; then
@@ -161,11 +162,11 @@ apptainer exec --cleanenv --nv \
     --env TORCH_NCCL_ASYNC_ERROR_HANDLING=1 \
     --env VLLM_LOGGING_LEVEL=INFO \
     --env VLLM_CONFIGURE_LOGGING=1 \
-    --env VLLM_CACHE_ROOT="/scratch/.cache/vllm" \
+    --env VLLM_CACHE_ROOT="${VLLM_CACHE_ROOT}" \
     --env VLLM_WORKER_MULTIPROC_METHOD=spawn \
     --env VLLM_HOST_IP=127.0.0.1 \
     "$IFILE" \
-    bash -c "mkdir -p /scratch/.cache/vllm && cd '${PROJECT_DIR}' && stdbuf -oL -eL ${TRAIN_CMD}"
+    bash -c "mkdir -p '${VLLM_CACHE_ROOT}' && cd '${PROJECT_DIR}' && stdbuf -oL -eL ${TRAIN_CMD}"
 
 EXIT_CODE=$?
 END_TIME=$(date +%s)

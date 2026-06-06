@@ -10,7 +10,19 @@
 
 source /home/speech-nlp-cse/24m0756/anaconda3/etc/profile.d/conda.sh
 
-cd /home/speech-nlp-cse/24m0756/abhishek/grpo_dataset/cache_tools/
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+MTP2_WORKSPACE_ROOT="${MTP2_WORKSPACE_ROOT:-}"
+MTP2_DATA_ROOT="${MTP2_DATA_ROOT:-}"
+
+if [ -z "$MTP2_DATA_ROOT" ] && [ -n "$MTP2_WORKSPACE_ROOT" ]; then
+    MTP2_DATA_ROOT="$MTP2_WORKSPACE_ROOT/grpo_dataset"
+fi
+if [ -z "$MTP2_DATA_ROOT" ]; then
+    MTP2_DATA_ROOT="$PROJECT_DIR/scripts/data"
+fi
+
+cd "${MTP2_CACHE_TOOLS_ROOT:-$MTP2_DATA_ROOT/cache_tools}"
 
 # Force offline mode — all models must be pre-cached (run download_models.py on login node first)
 export HF_HUB_OFFLINE=1

@@ -76,6 +76,7 @@ if [ ! -f "$IFILE" ]; then
 fi
 
 export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
+export VLLM_CACHE_ROOT="${VLLM_CACHE_ROOT:-$PROJECT_DIR/.cache/vllm}"
 
 # ── Output directory ──────────────────────────────────────────────────────────
 RESULTS_DIR="results/vllm"
@@ -165,10 +166,10 @@ apptainer exec --cleanenv --nv \
     --env USER=user \
     --env VLLM_LOGGING_LEVEL=INFO \
     --env VLLM_CONFIGURE_LOGGING=1 \
-    --env VLLM_CACHE_ROOT="/scratch/.cache/vllm" \
+    --env VLLM_CACHE_ROOT="${VLLM_CACHE_ROOT}" \
     --env VLLM_WORKER_MULTIPROC_METHOD=spawn \
     "$IFILE" \
-    bash -c "mkdir -p /scratch/.cache/vllm && cd '${PROJECT_DIR}' && stdbuf -oL -eL ${PYTHON_CMD}"
+    bash -c "mkdir -p '${VLLM_CACHE_ROOT}' && cd '${PROJECT_DIR}' && stdbuf -oL -eL ${PYTHON_CMD}"
 
 EXIT_CODE=$?
 

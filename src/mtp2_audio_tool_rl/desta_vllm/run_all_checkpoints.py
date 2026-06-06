@@ -30,6 +30,9 @@ import sys
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHECKPOINT_ROOT = os.path.join(PROJECT_DIR, "checkpoints")
+DEFAULT_VLLM_CACHE_ROOT = os.environ.get(
+    "VLLM_CACHE_ROOT", os.path.join(PROJECT_DIR, ".cache", "vllm")
+)
 
 SBATCH_HEADER = """\
 #!/bin/bash
@@ -102,10 +105,10 @@ apptainer exec --cleanenv --nv \\
     --env USER=user \\
     --env VLLM_LOGGING_LEVEL=INFO \\
     --env VLLM_CONFIGURE_LOGGING=1 \\
-    --env VLLM_CACHE_ROOT="/scratch/.cache/vllm" \\
+    --env VLLM_CACHE_ROOT="{vllm_cache_root}" \\
     --env VLLM_WORKER_MULTIPROC_METHOD=spawn \\
     "$IFILE" \\
-    bash -c "mkdir -p /scratch/.cache/vllm && cd '{project_dir}' && stdbuf -oL -eL $PYTHON_CMD"
+    bash -c "mkdir -p '{vllm_cache_root}' && cd '{project_dir}' && stdbuf -oL -eL $PYTHON_CMD"
 
 echo "Exit code: $?"
 echo ""
@@ -171,6 +174,7 @@ def _build_single_run(
         embed_dir=embed_dir,
         output=output,
         project_dir=PROJECT_DIR,
+        vllm_cache_root=DEFAULT_VLLM_CACHE_ROOT,
         max_model_len=max_model_len,
         max_new_tokens=max_new_tokens,
         gpu_memory=gpu_memory,

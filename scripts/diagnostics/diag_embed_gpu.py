@@ -7,8 +7,19 @@ Tests:
 3. Generation: single-sample greedy decode to verify coherent output
 """
 import torch, json, os, sys
-sys.path.insert(0, '/home/speech-nlp-cse/24m0756/abhishek/Desta_grpo')
-sys.path.insert(0, '/home/speech-nlp-cse/24m0756/abhishek/DeSTA2.5-Audio')
+
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+WORKSPACE_ROOT = os.environ.get("MTP2_WORKSPACE_ROOT")
+DESTA_REPO = os.environ.get("MTP2_DESTA_REPO")
+
+if not DESTA_REPO and WORKSPACE_ROOT:
+    DESTA_REPO = os.path.join(WORKSPACE_ROOT, "DeSTA2.5-Audio")
+if not DESTA_REPO:
+    DESTA_REPO = os.path.join(REPO_ROOT, "third_party", "DeSTA2.5-Audio")
+
+sys.path.insert(0, os.path.join(REPO_ROOT, "src", "mtp2_audio_tool_rl"))
+if os.path.isdir(DESTA_REPO):
+    sys.path.insert(0, DESTA_REPO)
 
 from transformers import AutoTokenizer
 from desta.models.modeling_desta25 import _prepare_audio_context_and_start_positions

@@ -82,4 +82,4 @@ judge_model: null
 
 # --- DeepSpeed ---
 deepspeed_stage: 2
-precomputed_embed_dir: /home/speech-nlp-cse/24m0756/abhishek/Audio-Maestro/precomputed_embeds
+precomputed_embed_dir: ${oc.env:MTP2_EMBED_ROOT,precomputed_embeds}
