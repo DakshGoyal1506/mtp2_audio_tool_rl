@@ -1,8 +1,8 @@
 # License Notes
 
-Do not create a top-level `LICENSE` file yet.
+A top-level `LICENSE` file is now present and uses MIT for original repository-authored code, scripts, configuration, documentation, and scaffolding only.
 
-License choice is still pending because this repository contains extracted project-owned code alongside patch metadata that interacts with several third-party repositories.
+That MIT license does not relicense third-party submodules, third-party-derived patch files, or external artifacts.
 
 Before choosing a license, review the upstream licenses and reuse constraints for:
 
@@ -17,6 +17,6 @@ Current local status:
 - `Audio-Maestro` remains unresolved locally because no top-level `LICENSE`, `COPYING`, or `NOTICE` file was found.
 - `DeSTA2.5-Audio` remains ambiguous locally: `setup.py` advertises an MIT classifier, some files contain Apache-2.0 header text, and no top-level license file was found.
 
-Recommended next step: keep issue `#1` open and complete an upstream license review before deciding between MIT, Apache-2.0, a custom research-use license, or leaving the repository without a public code license.
+Recommended next step: keep issue `#1` open and complete upstream license follow-up for Audio-Maestro, DeSTA2.5-Audio, and patch redistribution strategy.
 
-Until that review is finished, a private repository is the safest default.
+The repository can be public with these caveats documented, but third-party licensing and patch-policy follow-up still matters.

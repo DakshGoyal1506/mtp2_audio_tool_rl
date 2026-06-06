@@ -2,17 +2,16 @@
 
 ## Current Repository License Status
 
-- Top-level project license: pending.
-- `pyproject.toml` currently declares: `License pending upstream review`.
-- `docs/license_notes.md` correctly says not to create a top-level `LICENSE` yet.
-- Recommendation: keep the repository private until upstream license review and patch strategy decisions are complete.
-- Required conclusion: do not add a top-level `LICENSE` yet, and keep issue `#1` open.
+- Top-level project license: MIT for original repository code and documentation.
+- `pyproject.toml` now declares: `MIT for original repository code and documentation; third-party components retain their own terms`.
+- The top-level `LICENSE` is scoped and does not attempt to relicense submodules, third-party-derived patch files, or external artifacts.
+- Recommendation: the repository can be made public with third-party caveats clearly documented.
 
 ## Submodule Licenses Discoverable Locally
 
 | Submodule | Remote | Local commit | License found locally | Notes |
 | --- | --- | --- | --- | --- |
-| `third_party/Audio-Maestro` | `https://github.com/gary920209/Audio-Maestro.git` | `ba443a215573ff2d5b85e8efbec268343b40baa2` | Unresolved locally | `find third_party -maxdepth 3` found no local `LICENSE`, `COPYING`, or `NOTICE` file for Audio-Maestro. |
+| `third_party/Audio-Maestro` | `https://github.com/gary920209/Audio-Maestro.git` | `ba443a215573ff2d5b85e8efbec268343b40baa2` | Unresolved locally | `find third_party -maxdepth 3` found no local `LICENSE`, `COPYING`, or `NOTICE` file for Audio-Maestro. Public release should keep this caveat explicit. |
 | `third_party/DeSTA2.5-Audio` | `https://github.com/kehanlu/DeSTA2.5-Audio.git` | `e9b28ffd97c559eb178096b853321a1bbe5d97cf` | Ambiguous locally | No top-level `LICENSE`, `COPYING`, or `NOTICE` file was found. `setup.py` includes the classifier `License :: OSI Approved :: MIT License`, `desta/utils/audio.py` contains Apache-2.0 header text, and `docs/dataset.md` says original audio files cannot be redistributed. |
 | `third_party/ToolRL` | `https://github.com/qiancheng0/ToolRL.git` | `8cee13ec0ca72f0461da372a93a6fd8140dbb840` | Apache License 2.0 | Confirmed locally via `third_party/ToolRL/LICENSE`; file headers are also consistent with Apache-2.0. |
 
@@ -31,12 +30,12 @@ Patch files do preserve modifications to third-party code:
 
 ## Top-Level License Recommendation
 
-Do not add a top-level `LICENSE` before public release. The clean repo contains original/extracted research code, submodules, and patch overlays that interact with upstream projects whose local license status is incomplete or ambiguous.
+The top-level MIT `LICENSE` is reasonable for original repository-authored code, scripts, configuration, documentation, and scaffolding. It must remain paired with a clear notice that third-party submodules and third-party-derived patch files retain their own terms.
 
 ## Private/Public Recommendation
 
-- Private repository: acceptable for current research and preservation use.
-- Public repository: not ready until Audio-Maestro license status is resolved, DeSTA2.5-Audio licensing is clarified, and patch overlay distribution is reviewed.
+- Private repository: still acceptable.
+- Public repository: acceptable for initial visibility if third-party caveats are documented and users are not told that submodules or patch files are MIT-licensed under the top-level license.
 
 ## Unresolved License Decisions
 
@@ -45,4 +44,4 @@ Do not add a top-level `LICENSE` before public release. The clean repo contains 
 - Confirm whether DeSTA2.5-Audio redistribution constraints for code and non-redistributable audio are documented consistently.
 - Decide whether patch files can be publicly distributed as-is.
 - Decide whether modified third-party code should live as forks, patch overlays, or private-only preservation metadata.
-- Decide the top-level project license only after the above review.
+- Keep tracking these as follow-up work, but they no longer block adding a scoped MIT license for original repository-authored material.

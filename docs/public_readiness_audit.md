@@ -13,9 +13,9 @@
 
 PRIVATE OK.
 
-NOT READY FOR PUBLIC.
+PUBLIC POSSIBLE WITH CAVEATS.
 
-The repository is suitable to keep private for research preservation and collaboration, but it should not be made public until license and patch-publication issues are resolved.
+The repository can be made public once the scoped MIT license and third-party notices are in place. Remaining licensing and patch-policy questions should stay tracked, but they do not have to block initial public visibility.
 
 ## Already Safe
 
@@ -28,10 +28,8 @@ The repository is suitable to keep private for research preservation and collabo
 
 ## Must Be Fixed Before Public Release
 
-- Resolve top-level license status.
-- Confirm and document licenses for Audio-Maestro and DeSTA2.5-Audio.
-- Decide whether patch files modifying third-party code can be public.
-- Manually review API-key variable references in patch files.
+- Ensure the scoped MIT license and third-party notices remain present and accurate.
+- Avoid implying that third-party submodules or third-party-derived patches are MIT-licensed under the top-level license.
 - Decide whether detailed audit/extraction reports with old workspace metadata should be public.
 - Improve public-facing README/reproducibility documentation.
 
@@ -44,8 +42,8 @@ The repository is suitable to keep private for research preservation and collabo
 
 ## Recommended Next Phase
 
-1. Complete upstream license review.
+1. Keep issue `#1` open for upstream license follow-up.
 2. Decide patch strategy: public forks, public patch overlays, or private-only patches.
 3. Run a dedicated secret scanner and manually review patch files.
 4. Prepare a public-facing documentation set separate from internal audit records.
-5. Only then consider changing repository visibility.
+5. Review which internal audit/migration docs should stay private.

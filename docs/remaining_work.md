@@ -2,14 +2,14 @@
 
 ## Current State
 
-The repository is in a solid private-working state: setup is complete, lightweight CI is working, submodules are pinned, patch dry-runs pass, and the dataset skeleton is in place. The current public-readiness verdict is still `PRIVATE OK` but `NOT READY FOR PUBLIC`, mainly because licensing, patch-publication review, and public-facing documentation are not finished.
+The repository is in a solid working state: setup is complete, lightweight CI is working, submodules are pinned, patch dry-runs pass, the dataset skeleton is in place, and a scoped MIT license now covers original repository-authored code and documentation. Public visibility is possible with third-party caveats documented, but there is still worthwhile follow-up work.
 
 ## Blocking Before Public Release
 
 - License review:
-  Confirm the unresolved Audio-Maestro license, clarify the ambiguous DeSTA2.5-Audio license signals, and then decide whether a top-level project license is compatible with extracted code, submodules, and patch overlays.
+  Keep issue `#1` open to confirm the unresolved Audio-Maestro license and clarify the ambiguous DeSTA2.5-Audio license signals.
 - Patch secret-risk review:
-  Manually review patch files that mention Gemini/API-key variables and rerun a dedicated secret scan before any visibility change.
+  Manually review patch files that mention Gemini/API-key variables and rerun a dedicated secret scan as follow-up.
 - Third-party patch strategy:
   Decide whether preserved third-party changes should stay as patch overlays, move to forks, or remain private-only preservation metadata.
 - Public docs cleanup:
@@ -20,16 +20,15 @@ The repository is in a solid private-working state: setup is complete, lightweig
 ### Title
 Review upstream licenses and decide top-level license
 
-- Priority: `blocking`
-- Scope: audit upstream license terms for Audio-Maestro, DeSTA2.5-Audio, ToolRL, and the interaction between extracted code and patch files.
-- Acceptance criteria: upstream license status is documented; redistribution constraints are understood; decision recorded on whether to add a top-level `LICENSE`.
-- Acceptance criteria: upstream license status is documented; Audio-Maestro remains resolved or explicitly unresolved; DeSTA2.5-Audio ambiguity is resolved; decision recorded on whether to add a top-level `LICENSE`.
-- Files likely involved: `pyproject.toml`, `docs/license_notes.md`, `docs/license_audit.md`, `docs/public_release_blockers.md`, `third_party/README.md`, `.gitmodules`
+- Priority: `high`
+- Scope: audit upstream license terms for Audio-Maestro, DeSTA2.5-Audio, ToolRL, and the interaction between extracted code, top-level MIT licensing, and patch files.
+- Acceptance criteria: upstream license status is documented; Audio-Maestro remains resolved or explicitly unresolved; DeSTA2.5-Audio ambiguity is resolved; repository notices remain accurate.
+- Files likely involved: `LICENSE`, `THIRD_PARTY_NOTICES.md`, `pyproject.toml`, `docs/license_notes.md`, `docs/license_audit.md`, `docs/public_release_blockers.md`, `third_party/README.md`, `.gitmodules`
 
 ### Title
 Review patch files for secret-risk before public release
 
-- Priority: `blocking`
+- Priority: `high`
 - Scope: manually inspect patch files that reference Gemini/API-key variables and confirm they contain only environment-variable references or placeholders.
 - Acceptance criteria: secret review is documented; any risky patch content is removed, redacted, or kept private; a follow-up secret scan passes.
 - Files likely involved: `docs/secret_risk_audit.md`, `patches/audio-maestro-main/`, `patches/audio-maestro-bak/`, `patches/desta-grpo/`
@@ -37,7 +36,7 @@ Review patch files for secret-risk before public release
 ### Title
 Decide patch strategy: overlays vs forks vs private-only
 
-- Priority: `blocking`
+- Priority: `high`
 - Scope: decide how third-party modifications should be preserved for a future public repo.
 - Acceptance criteria: each patch directory has a chosen strategy; duplicate patches are rationalized; public/private treatment is documented.
 - Files likely involved: `docs/patch_application_plan.md`, `docs/license_audit.md`, `patches/`, `third_party/README.md`
@@ -78,5 +77,5 @@ Create external artifact and dataset reconstruction checklist
 
 - No datasets, raw audio, checkpoints, or generated results should be added to Git.
 - No patch application inside submodules is needed; dry-run preview is enough for now.
-- No public release should happen yet.
 - No heavy CI job is needed yet; lightweight checks are the right default until non-GPU tests are added.
+- No claim should be made that third-party submodules or patch-derived code are MIT-licensed by the top-level `LICENSE`.
