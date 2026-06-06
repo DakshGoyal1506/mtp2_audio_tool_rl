@@ -228,7 +228,7 @@ No generated artifact, large file, nested Git repository, full third-party clone
 Before running remote or push commands, create an empty GitHub repository:
 
 - Owner: `DakshGoyal1506`
-- Repository name: `mtp2-audio-tool-rl`
+- Repository name: `mtp2_audio_tool_rl`
 - Visibility: `Private`
 - Do not add README
 - Do not add `.gitignore`
@@ -246,7 +246,7 @@ git add README.md .gitignore .gitattributes src/ scripts/ configs/ tests/ docs/ 
 git diff --cached --stat
 git diff --cached --name-only
 git commit -m "Initial clean MTP2 audio tool RL repository"
-git remote add origin git@github.com:DakshGoyal1506/mtp2-audio-tool-rl.git
+git remote add origin git@github.com:DakshGoyal1506/mtp2_audio_tool_rl.git
 git remote -v
 git push -u origin main
 ```
@@ -254,7 +254,7 @@ git push -u origin main
 If SSH is not configured, use this remote instead after initialization:
 
 ```bash
-git remote add origin https://github.com/DakshGoyal1506/mtp2-audio-tool-rl.git
+git remote add origin https://github.com/DakshGoyal1506/mtp2_audio_tool_rl.git
 ```
 
 ## Final Recommendation

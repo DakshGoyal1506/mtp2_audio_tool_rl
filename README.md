@@ -97,8 +97,8 @@ Reproducibility is not complete yet. We have preserved code, configs, tests, and
 ## GitHub target
 
 - Owner: `DakshGoyal1506`
-- Repo: `mtp2-audio-tool-rl`
-- Preferred remote: `git@github.com:DakshGoyal1506/mtp2-audio-tool-rl.git`
-- HTTPS fallback: `https://github.com/DakshGoyal1506/mtp2-audio-tool-rl.git`
+- Repo: `mtp2_audio_tool_rl`
+- Preferred remote: `git@github.com:DakshGoyal1506/mtp2_audio_tool_rl.git`
+- HTTPS fallback: `https://github.com/DakshGoyal1506/mtp2_audio_tool_rl.git`
 
 Git initialization, the first commit, and any push should happen only after the remaining metadata, license review, and safety checks are complete.

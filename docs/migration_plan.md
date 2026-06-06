@@ -104,7 +104,7 @@ git diff --cached --name-only
 
 # If staged contents are safe:
 git commit -m "Initial clean MTP audio tool RL repository"
-git remote add origin git@github.com:<USER_OR_ORG>/mtp2-audio-tool-rl.git
+git remote add origin git@github.com:<USER_OR_ORG>/mtp2_audio_tool_rl.git
 git push -u origin main
 ```
 
