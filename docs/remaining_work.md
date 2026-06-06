@@ -2,7 +2,7 @@
 
 ## Current State
 
-The repository is in a solid working state: setup is complete, lightweight CI is working, submodules are pinned, patch dry-runs pass, the dataset skeleton is in place, and a scoped MIT license now covers original repository-authored code and documentation. Public visibility is possible with third-party caveats documented, but there is still worthwhile follow-up work.
+The repository is in a solid working state: setup is complete, lightweight CI is working, lightweight validation tests have been added, submodules are pinned, patch dry-runs pass, the dataset skeleton is in place, and a scoped MIT license now covers original repository-authored code and documentation. Public visibility is possible with third-party caveats documented, but there is still worthwhile follow-up work.
 
 ## Blocking Before Public Release
 
@@ -13,7 +13,7 @@ The repository is in a solid working state: setup is complete, lightweight CI is
 - Third-party patch strategy:
   Decide whether preserved third-party changes should stay as patch overlays, move to forks, or remain private-only preservation metadata.
 - Public docs cleanup:
-  Separate internal audit/migration notes from public-facing setup, reproducibility, and data reconstruction documentation.
+  A public documentation map and internal-audit index now exist. The remaining decision is whether to move internal audit/migration notes into `docs/internal/` later.
 
 ## Recommended GitHub Issues
 
@@ -52,18 +52,18 @@ Create public-facing README and reproducibility guide
 ### Title
 Add lightweight unit tests for non-GPU utilities
 
-- Priority: `medium`
-- Scope: add tests for manifest validation, path helpers, and other small non-heavy utilities that can run in CI without models or datasets.
-- Acceptance criteria: at least a small fast test set runs in CI; tests do not require GPUs, checkpoints, or external datasets.
+- Priority: `low`
+- Scope: extend the new lightweight test surface with more non-heavy utilities as they stabilize.
+- Acceptance criteria: additional fast tests run in CI; tests do not require GPUs, checkpoints, or external datasets.
 - Files likely involved: `tests/`, `.github/workflows/repo-check.yml`, `scripts/data/validate_manifest.py`, `scripts/setup/check_repo_setup.py`
 
 ### Title
 Decide whether audit/migration docs should remain in public repo
 
 - Priority: `medium`
-- Scope: review internal audit, migration, and extraction documents for whether they belong in a public release.
-- Acceptance criteria: each major audit/migration doc is either retained, summarized, moved private, or replaced with a public-safe version.
-- Files likely involved: `docs/public_readiness_audit.md`, `docs/public_release_blockers.md`, `docs/extraction_report.md`, `docs/extraction_inventory.md`, `docs/migration_plan.md`
+- Scope: review internal audit, migration, and extraction documents for whether they should stay where they are or move under `docs/internal/`.
+- Acceptance criteria: each major audit/migration doc is either retained, summarized, moved to `docs/internal/`, moved private, or replaced with a public-safe version.
+- Files likely involved: `docs/PUBLIC_DOCS.md`, `docs/INTERNAL_AUDITS.md`, `docs/public_readiness_audit.md`, `docs/public_release_blockers.md`, `docs/extraction_report.md`, `docs/extraction_inventory.md`, `docs/migration_plan.md`
 
 ### Title
 Create external artifact and dataset reconstruction checklist
@@ -78,4 +78,5 @@ Create external artifact and dataset reconstruction checklist
 - No datasets, raw audio, checkpoints, or generated results should be added to Git.
 - No patch application inside submodules is needed; dry-run preview is enough for now.
 - No heavy CI job is needed yet; lightweight checks are the right default until non-GPU tests are added.
+- No immediate doc moves are needed; the public/internal indexes are enough for now.
 - No claim should be made that third-party submodules or patch-derived code are MIT-licensed by the top-level `LICENSE`.

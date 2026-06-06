@@ -38,6 +38,14 @@ mtp2-audio-tool-rl/
 └── third_party/
 ```
 
+## Documentation Map
+
+- [Quickstart](docs/quickstart.md)
+- [Reproducibility](docs/reproducibility.md)
+- [Dataset reconstruction](docs/dataset_reconstruction.md)
+- [Public documentation map](docs/PUBLIC_DOCS.md)
+- [Internal audit and migration docs](docs/INTERNAL_AUDITS.md)
+
 ## Quickstart
 
 Clone with submodules and install the lightweight base environment:
