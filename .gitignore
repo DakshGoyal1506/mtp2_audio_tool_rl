@@ -30,6 +30,7 @@ htmlcov/
 # Secrets and local config
 .env
 .env.*
+!.env.example
 *.key
 *.pem
 *.secret
@@ -110,13 +111,18 @@ slurm-*.err
 *.docker
 
 # Third-party clones accidentally copied into root
-Audio-Maestro/
-Audio-Maestro-bak/
-DeSTA2.5-Audio/
-Desta_grpo/
-toolRL/
-rlTool/
-af3_qwen_vllm_deployment/
+/Audio-Maestro/
+/Audio-Maestro-bak/
+/DeSTA2.5-Audio/
+/Desta_grpo/
+/toolRL/
+/rlTool/
+/af3_qwen_vllm_deployment/
+
+!third_party/
+!third_party/Audio-Maestro/
+!third_party/DeSTA2.5-Audio/
+!third_party/ToolRL/
 
 # Local OS files
 .DS_Store

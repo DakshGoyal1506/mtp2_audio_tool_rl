@@ -9,6 +9,7 @@
 - `Makefile` with setup, check, import, test, and status targets.
 - `scripts/setup/check_repo_setup.py` for lightweight repository safety checks.
 - `scripts/setup/check_imports.py` for base package import checks without loading heavy model/GPU modules.
+- `scripts/setup/check_repo_setup.py` now reads `.gitmodules`, verifies registered submodule paths exist, and skips submodule working trees during parent-repo artifact scans.
 
 ## Checks Run
 
@@ -17,6 +18,8 @@
 - `python3 scripts/setup/check_repo_setup.py`: PASS.
 - `python3 scripts/setup/check_imports.py`: PASS.
 - `find . -type f -size +10M -print`: no files reported.
+- After submodules were added, `python3 scripts/setup/check_repo_setup.py`: PASS, with registered submodule working trees skipped.
+- `find . -type f -size +10M -not -path './third_party/*' -print`: no parent-repo files reported.
 
 ## Status
 
@@ -34,4 +37,4 @@ Full `pytest` was not run because existing tests may require GPUs, model checkpo
 
 ## Submodules
 
-Submodules remain deferred. Third-party repositories should be added only after the current setup metadata is committed and reviewed.
+Submodules have been added under `third_party/` for `Audio-Maestro`, `DeSTA2.5-Audio`, and `ToolRL`. The setup checker treats these registered submodule paths as gitlinks for parent-repo safety checks and still scans normal parent-repo files outside submodules.

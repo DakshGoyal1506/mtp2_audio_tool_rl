@@ -1,0 +1,9 @@
+[submodule "third_party/ToolRL"]
+	path = third_party/ToolRL
+	url = https://github.com/qiancheng0/ToolRL.git
+[submodule "third_party/Audio-Maestro"]
+	path = third_party/Audio-Maestro
+	url = https://github.com/gary920209/Audio-Maestro.git
+[submodule "third_party/DeSTA2.5-Audio"]
+	path = third_party/DeSTA2.5-Audio
+	url = https://github.com/kehanlu/DeSTA2.5-Audio.git
