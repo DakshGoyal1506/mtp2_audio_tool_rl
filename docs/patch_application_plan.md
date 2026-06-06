@@ -8,7 +8,7 @@ This plan is for patch dry-runs only. The helper script uses `git apply --check`
 
 | Patch | Target submodule | Dry-run result | Notes |
 | --- | --- | --- | --- |
-| `patches/audio-maestro-main/tracked_changes.patch` | `third_party/Audio-Maestro` | FAIL | Fails on binary image deletions for `image/Results.png` and `image/framework.png`; source-file hunks still need separate review. |
+| `patches/audio-maestro-main/tracked_source_only.patch` | `third_party/Audio-Maestro` | PASS | Active preview patch; excludes binary image deletions from the preserved full tracked diff. |
 | `patches/desta25-audio/tracked_changes.patch` | `third_party/DeSTA2.5-Audio` | PASS | Clean `git apply --check` against pinned submodule commit. |
 | `patches/desta-grpo-toolrl/tracked_changes.patch` | `third_party/ToolRL` | PASS | Clean `git apply --check` against pinned submodule commit. |
 
@@ -41,11 +41,13 @@ Expected behavior:
 
 The latest preview run reported:
 
-- `Audio-Maestro`: FAIL because the patch contains binary image deletion hunks without full binary index lines.
+- `Audio-Maestro`: PASS using `tracked_source_only.patch`.
 - `DeSTA2.5-Audio`: PASS.
 - `ToolRL`: PASS.
 
 No patches were applied.
+
+The original `patches/audio-maestro-main/tracked_changes.patch` is still preserved for audit/history. It includes binary image deletion hunks for `image/Results.png` and `image/framework.png`, which are intentionally excluded from the active preview patch. Those deleted binary images are not needed for the current code setup.
 
 ## If A Patch Applies Cleanly
 
@@ -57,7 +59,7 @@ Do not apply it directly inside a pinned submodule on the main branch. Prefer on
 
 ## If A Patch Fails
 
-Manually review the failing patch before any application attempt. For the current Audio-Maestro failure, likely next steps are:
+Manually review any failing patch before an application attempt. If the original full Audio-Maestro patch is revisited, likely next steps are:
 
 - Split source-code changes from binary asset deletions.
 - Regenerate a source-only patch for `audio_maestro/audio_copilot.py`, `scripts/prompts.py`, and `scripts/tool_execute_gemini.py`.

@@ -1,0 +1,1604 @@
+diff --git a/audio_maestro/audio_copilot.py b/audio_maestro/audio_copilot.py
+index be81b14..9b03e7c 100644
+--- a/audio_maestro/audio_copilot.py
++++ b/audio_maestro/audio_copilot.py
+@@ -5,6 +5,9 @@
+ # Support Cache for Efficiency          #
+ #########################################
+ 
++import os
++os.environ["PYANNOTE_AUDIO_DISABLE_TORCHCODEC"] = "1"
++
+ import json
+ import asyncio
+ import numpy as np
+@@ -19,16 +22,15 @@ from pathlib import Path
+ import tempfile
+ import subprocess
+ import re
+-import os
+ 
+-from pyannote.audio import Pipeline
++# from pyannote.audio import Pipeline
+ from sklearn.metrics.pairwise import cosine_similarity
+ from transformers import (
+     WhisperProcessor, WhisperForConditionalGeneration,
+     pipeline
+ )
+ import textgrid
+-import autochord
++# import autochord
+ from dotenv import load_dotenv
+ 
+ load_dotenv()
+@@ -37,12 +39,18 @@ warnings.filterwarnings("ignore")
+ 
+ class AudioCopilotTool:
+     """Audio analysis toolkit with speech, sound, and music processing capabilities"""
+-    
++
+     def __init__(self):
+         """Initialize tool with lazy-loaded models"""
+-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
++        # Use MPS for Mac GPU, CUDA for NVIDIA GPU, CPU otherwise
++        if torch.backends.mps.is_available():
++            self.device = torch.device("mps")
++        elif torch.cuda.is_available():
++            self.device = torch.device("cuda")
++        else:
++            self.device = torch.device("cpu")
+         print(f"Using device: {self.device}")
+-        
++
+         # Model references (loaded on first use)
+         self._whisper_model = None
+         self._whisper_processor = None
+@@ -50,14 +58,14 @@ class AudioCopilotTool:
+         self._sound_classifier = None
+         self._diarization_pipeline = None
+         self._embedding_model = None
+-    
++
+     def _load_audio(self, audio_path: str) -> Tuple[np.ndarray, int]:
+         """Load audio file"""
+         try:
+             return librosa.load(audio_path, sr=None)
+         except Exception as e:
+             raise Exception(f"Failed to load audio: {e}")
+-    
++
+     def _get_whisper_model(self):
+         """Lazy load Whisper model"""
+         if self._whisper_model is None:
+@@ -65,14 +73,15 @@ class AudioCopilotTool:
+                 print("Loading Whisper model...")
+                 self._whisper_processor = WhisperProcessor.from_pretrained("openai/whisper-large-v3")
+                 self._whisper_model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large-v3")
+-                self._whisper_model = self._whisper_model.to(self.device)
+-                print(f"Whisper loaded on {self.device}")
++                # Keep model in float32 to avoid type mismatch errors
++                self._whisper_model = self._whisper_model.to(self.device).float()
++                print(f"Whisper loaded on {self.device} in float32")
+             except Exception as e:
+                 print(f"Failed to load Whisper: {e}")
+                 self._whisper_model = None
+                 self._whisper_processor = None
+         return self._whisper_model, self._whisper_processor
+-    
++
+     def _get_emotion_model(self):
+         """Lazy load emotion recognition model"""
+         if self._emotion_model is None:
+@@ -81,14 +90,15 @@ class AudioCopilotTool:
+                 from funasr import AutoModel
+                 self._emotion_model = AutoModel(
+                     model="iic/emotion2vec_plus_large",
+-                    hub="hf"
++                    hub="hf",
++                    device=str(self.device)
+                 )
+-                print("Emotion model loaded")
++                print(f"Emotion model loaded on {self.device}")
+             except Exception as e:
+                 print(f"Failed to load emotion model: {e}")
+                 self._emotion_model = None
+         return self._emotion_model
+-    
++
+     def _get_sound_classifier(self):
+         """Lazy load sound classification model"""
+         if self._sound_classifier is None:
+@@ -104,25 +114,25 @@ class AudioCopilotTool:
+                 print(f"Failed to load sound classifier: {e}")
+                 self._sound_classifier = None
+         return self._sound_classifier
+-    
++
+     # Speech Recognition
+-    
++
+     async def speech_recognition(self, audio_path: str) -> Dict:
+         """Convert speech to text using Whisper"""
+         audio, sr = self._load_audio(audio_path)
+-        
++
+         try:
+             # Check cache
+             base_name = Path(audio_path).stem
+             cache_dir = Path(audio_path).parent / "transcriptions"
+             cache_dir.mkdir(exist_ok=True)
+             cache_file = cache_dir / f"{base_name}.txt"
+-            
++
+             if cache_file.exists():
+                 print(f"Using cached transcription: {cache_file}")
+                 with open(cache_file, 'r', encoding='utf-8') as f:
+                     transcription = f.read().strip()
+-                
++
+                 if not transcription:
+                     return {
+                         'function': 'speech_recognition',
+@@ -130,23 +140,24 @@ class AudioCopilotTool:
+                         'text': '',
+                         'language': 'auto-detected',
+                     }
+-                
++
+                 return {
+                     'function': 'speech_recognition',
+                     'text': transcription,
+                     'language': 'auto-detected',
+                 }
+-            
++
+             # Run recognition
+             model, processor = self._get_whisper_model()
+-            
++
+             if sr != 16000:
+                 audio = librosa.resample(audio, orig_sr=sr, target_sr=16000)
+                 sr = 16000
+-            
++
+             inputs = processor(audio, sampling_rate=sr, return_tensors="pt")
+-            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+-            
++            # Ensure inputs are in float32 and on the correct device
++            inputs = {k: v.to(self.device).float() for k, v in inputs.items()}
++
+             with torch.no_grad():
+                 if "attention_mask" in inputs:
+                     predicted_ids = model.generate(
+@@ -155,13 +166,13 @@ class AudioCopilotTool:
+                     )
+                 else:
+                     predicted_ids = model.generate(inputs["input_features"])
+-            
++
+             transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True, language="en")
+-            
++
+             # Cache result
+             with open(cache_file, 'w', encoding='utf-8') as f:
+                 f.write(transcription[0] if transcription else "")
+-            
++
+             if not transcription or not transcription[0].strip():
+                 return {
+                     'function': 'speech_recognition',
+@@ -169,19 +180,19 @@ class AudioCopilotTool:
+                     'text': '',
+                     'language': 'auto-detected',
+                 }
+-            
++
+             return {
+                 'function': 'speech_recognition',
+                 'text': transcription[0],
+                 'language': 'auto-detected',
+             }
+-            
++
+         except Exception as e:
+             return {
+                 'function': 'speech_recognition',
+                 'error': str(e),
+             }
+-        
++
+     async def speaker_diarization(self, audio_path: str) -> Dict:
+         """Identify and separate different speakers in audio"""
+         try:
+@@ -189,64 +200,76 @@ class AudioCopilotTool:
+             if self._diarization_pipeline is None:
+                 self._diarization_pipeline = Pipeline.from_pretrained(
+                     "pyannote/speaker-diarization-3.1"
+-                )
+-            
++                ).to(self.device)
++                print(f"Diarization pipeline loaded on {self.device}")
++
+             if self._embedding_model is None:
+                 from speechbrain.inference.speaker import EncoderClassifier
+                 self._embedding_model = EncoderClassifier.from_hparams(
+-                    source="speechbrain/spkrec-ecapa-voxceleb"
++                    source="speechbrain/spkrec-ecapa-voxceleb",
++                    run_opts={"device": str(self.device)}
+                 )
+-            
++                print(f"Embedding model loaded on {self.device}")
++
+             def extract_segment(path, start, end):
+                 """Extract audio segment"""
+                 audio, sr = librosa.load(path, sr=None)
+                 start_sample = int(start * sr)
+                 end_sample = int(end * sr)
+                 return audio[start_sample:end_sample]
+-            
++
+             def run_diarization(path):
+                 """Run diarization and merge similar speakers"""
+                 diarization = self._diarization_pipeline(path)
+-                
++
+                 # Extract embeddings per speaker
+                 speaker_embeddings = {}
+                 for segment, track, speaker in diarization.itertracks(yield_label=True):
+                     if segment.end - segment.start < 0.6:
+                         continue
+-                    
++
+                     seg_waveform = extract_segment(path, segment.start, segment.end)
+                     try:
+                         if isinstance(seg_waveform, np.ndarray):
+                             seg_waveform = torch.from_numpy(seg_waveform).float()
+-                        
++
+                         if seg_waveform.dim() == 1:
+                             seg_waveform = seg_waveform.unsqueeze(0)
+-                        
++
+                         seg_waveform = seg_waveform.to(self.device)
+                         emb = self._embedding_model(seg_waveform)
+                     except Exception as e:
+                         print(f"Embedding extraction failed for {speaker}: {e}")
+                         continue
+-                    
++
+                     if isinstance(emb, tuple):
+                         emb = emb[0]
+                     emb = emb.detach().cpu().numpy()
+                     if emb.ndim > 1:
+                         emb = emb.squeeze()
+-                    
++
+                     if speaker not in speaker_embeddings:
+                         speaker_embeddings[speaker] = []
+                     speaker_embeddings[speaker].append(emb)
+-                
++
+                 # Average embeddings
+                 for speaker in speaker_embeddings:
+                     speaker_embeddings[speaker] = np.mean(speaker_embeddings[speaker], axis=0)
+-                
++
++                # Handle empty case - no speakers detected
++                if len(speaker_embeddings) == 0:
++                    return []
++
+                 # Compute similarity and merge
+                 speakers = list(speaker_embeddings.keys())
+                 emb_matrix = np.array([speaker_embeddings[s] for s in speakers])
+-                sim_matrix = cosine_similarity(emb_matrix)
+-                
++
++                # Handle single speaker case
++                if len(speakers) == 1:
++                    sim_matrix = np.array([[1.0]])
++                else:
++                    sim_matrix = cosine_similarity(emb_matrix)
++
+                 threshold = 0.10
+                 merged = {}
+                 for i, spk1 in enumerate(speakers):
+@@ -255,7 +278,7 @@ class AudioCopilotTool:
+                             continue
+                         if sim_matrix[i, j] > threshold:
+                             merged[spk2] = spk1
+-                
++
+                 # Build segments with merged labels
+                 segments = []
+                 for segment, track, speaker in diarization.itertracks(yield_label=True):
+@@ -267,47 +290,58 @@ class AudioCopilotTool:
+                         'speaker': speaker,
+                         'duration': segment.end - segment.start
+                     })
+-                
++
+                 return segments
+-            
++
+             segments = await asyncio.to_thread(run_diarization, audio_path)
+-            
++
++            # Handle empty segments - no speakers detected
++            if not segments:
++                return {
++                    'function': 'speaker_diarization',
++                    'segments': [],
++                    'speakers': [],
++                    'num_speakers': 0,
++                    'total_duration': 0,
++                    'note': 'No speakers detected in audio'
++                }
++
+             # Map to ordinal names
+             speaker_first_appearance = {}
+             for segment in segments:
+                 speaker = segment['speaker']
+                 if speaker not in speaker_first_appearance:
+                     speaker_first_appearance[speaker] = segment['start']
+-            
++
+             sorted_speakers = sorted(speaker_first_appearance.items(), key=lambda x: x[1])
+             speaker_mapping = {}
+             ordinals = ["first", "second", "third", "fourth", "fifth"]
+-            
++
+             for i, (original_speaker, _) in enumerate(sorted_speakers):
+                 if i < len(ordinals):
+                     speaker_mapping[original_speaker] = f"{ordinals[i]} speaker"
+                 else:
+                     speaker_mapping[original_speaker] = f"{i + 1}th speaker"
+-            
++
+             for segment in segments:
+                 segment['speaker'] = speaker_mapping[segment['speaker']]
+-            
++
+             speakers = list(set([seg['speaker'] for seg in segments]))
+             total_duration = sum([seg['duration'] for seg in segments])
+-            
++
+             return {
+                 'segments': segments,
+                 'speakers': speakers,
+                 'num_speakers': len(speakers),
+                 'total_duration': total_duration,
+             }
+-            
++
+         except Exception as e:
+             return {
+                 'function': 'speaker_diarization',
+                 'error': str(e),
+             }
+-        
++
+     async def emotion_recognition(self, audio_path: str) -> Dict:
+         """Detect emotion changes for each speaker"""
+         try:
+@@ -315,29 +349,29 @@ class AudioCopilotTool:
+             diarization_result = await self.speaker_diarization(audio_path)
+             if 'error' in diarization_result:
+                 return {'error': f"Diarization failed: {diarization_result['error']}"}
+-            
++
+             def extract_segment(path, start, end):
+                 """Extract audio segment"""
+                 audio, sr = librosa.load(path, sr=None)
+                 start_sample = int(start * sr)
+                 end_sample = int(end * sr)
+                 return audio[start_sample:end_sample]
+-            
++
+             def detect_emotion(audio_segment):
+                 """Detect emotion in segment"""
+                 emotion_model = self._get_emotion_model()
+                 if emotion_model is None:
+                     return {"neutral": 0.5}
+-                
++
+                 # Pad short segments
+                 if len(audio_segment) < 8000:
+                     padding_needed = 8000 - len(audio_segment)
+                     audio_segment = np.pad(audio_segment, (0, padding_needed), mode='constant')
+-                
++
+                 try:
+                     audio_16k = librosa.resample(audio_segment, orig_sr=22050, target_sr=16000)
+                     results = emotion_model.generate(audio_16k)
+-                    
++
+                     if isinstance(results, list) and len(results) > 0:
+                         entry = results[0]
+                         if 'scores' in entry and 'labels' in entry:
+@@ -353,41 +387,41 @@ class AudioCopilotTool:
+                 except Exception as e:
+                     print(f"Emotion detection error: {e}")
+                     return {"neutral": 0.5}
+-            
++
+             # Analyze emotions per speaker
+             speaker_emotions = {}
+             emotion_flips = []
+-            
++
+             for segment in diarization_result['segments']:
+                 speaker = segment['speaker']
+                 start_time = segment['start']
+                 end_time = segment['end']
+-                
++
+                 if end_time - start_time < 0.1:
+                     continue
+-                
++
+                 segment_audio = await asyncio.to_thread(
+                     extract_segment, audio_path, start_time, end_time
+                 )
+-                
++
+                 emotions = await asyncio.to_thread(detect_emotion, segment_audio)
+-                
++
+                 if speaker not in speaker_emotions:
+                     speaker_emotions[speaker] = []
+-                
++
+                 dominant_emotion = max(emotions, key=emotions.get)
+                 speaker_emotions[speaker].append({
+                     'start': start_time,
+                     'end': end_time,
+                     'emotion': dominant_emotion,
+                 })
+-            
++
+             # Detect emotion flips
+             for speaker, emotions in speaker_emotions.items():
+                 for i in range(1, len(emotions)):
+                     prev_emotion = emotions[i-1]['emotion']
+                     curr_emotion = emotions[i]['emotion']
+-                    
++
+                     if prev_emotion != curr_emotion and \
+                        prev_emotion != '中立/neutral' and curr_emotion != '中立/neutral':
+                         emotion_flips.append({
+@@ -396,68 +430,68 @@ class AudioCopilotTool:
+                             'from_emotion': prev_emotion,
+                             'to_emotion': curr_emotion,
+                         })
+-            
++
+             num_speakers_with_flips = len(set(flip['speaker'] for flip in emotion_flips))
+-            
++
+             return {
+                 'speaker_emotions': speaker_emotions,
+                 'emotion_flips': emotion_flips,
+                 'num_flips': len(emotion_flips),
+                 'num_speakers_with_flips': num_speakers_with_flips,
+             }
+-            
++
+         except Exception as e:
+             return {
+                 'function': 'emotion_recognition',
+                 'error': str(e),
+             }
+-        
++
+     def run_mfa(self, audio_path: str, transcript: str, mfa_bin="mfa") -> str:
+         """Run Montreal Forced Aligner"""
+         try:
+             if not transcript.strip():
+                 raise ValueError("Empty transcript - cannot run MFA")
+-            
++
+             # Clean transcript
+             cleaned_transcript = transcript.lower().strip()
+             cleaned_transcript = re.sub(r"[^\w\s']", " ", cleaned_transcript)
+             cleaned_transcript = re.sub(r'\s+', ' ', cleaned_transcript).strip()
+-            
++
+             if not cleaned_transcript:
+                 raise ValueError("Transcript empty after cleaning")
+-            
++
+             print(f"Cleaned transcript: '{cleaned_transcript}'")
+-            
++
+             with tempfile.TemporaryDirectory() as temp_dir:
+                 temp_path = Path(temp_dir)
+                 input_dir = temp_path / "input"
+                 input_dir.mkdir(exist_ok=True)
+-                
++
+                 # Copy audio
+                 audio_file = Path(audio_path)
+                 base_name = audio_file.stem
+                 input_audio = input_dir / f"{base_name}.wav"
+-                
++
+                 import shutil
+                 shutil.copy2(audio_path, input_audio)
+-                
++
+                 # Write transcript
+                 txt_path = input_dir / f"{base_name}.txt"
+                 with open(txt_path, "w", encoding="utf-8") as f:
+                     f.write(cleaned_transcript)
+-                
++
+                 output_dir = temp_path / "output"
+                 output_dir.mkdir(exist_ok=True)
+-                
++
+                 # Check cache
+                 permanent_output = Path(audio_path).parent / "mfa_output"
+                 tg_file = permanent_output / f"{base_name}.TextGrid"
+                 permanent_output.mkdir(exist_ok=True)
+-                
++
+                 if tg_file.exists():
+                     print(f"Using cached TextGrid: {tg_file}")
+                     return str(tg_file)
+-                
++
+                 # Run MFA
+                 mfa_cmd = [
+                     mfa_bin, "align",
+@@ -468,13 +502,14 @@ class AudioCopilotTool:
+                     "--beam", "100",
+                     "--retry_beam", "400",
+                     "--clean",
++                    "--num_jobs", "32",  # Use 32 CPU cores
+                     "--verbose",
+                     "--include_original_text"
+                 ]
+-                
++
+                 print(f"Running MFA: {' '.join(mfa_cmd)}")
+                 result = subprocess.run(mfa_cmd, capture_output=True, text=True, check=False)
+-                
++
+                 if result.returncode != 0:
+                     print("MFA failed, retrying with larger beam...")
+                     mfa_cmd_retry = [
+@@ -486,14 +521,15 @@ class AudioCopilotTool:
+                         "--beam", "200",
+                         "--retry_beam", "800",
+                         "--clean",
++                        "--num_jobs", "32",  # Use 4 CPU cores
+                         "--verbose"
+                     ]
+-                    
++
+                     result = subprocess.run(mfa_cmd_retry, capture_output=True, text=True, check=False)
+-                    
++
+                     if result.returncode != 0:
+                         raise RuntimeError(f"MFA failed: {result.stderr}")
+-                
++
+                 # Find TextGrid
+                 tg_file = output_dir / f"{base_name}.TextGrid"
+                 if not tg_file.exists():
+@@ -502,37 +538,37 @@ class AudioCopilotTool:
+                         tg_file = tg_files[0]
+                     else:
+                         raise FileNotFoundError(f"No TextGrid in {output_dir}")
+-                
++
+                 # Copy to permanent location
+                 final_tg_path = permanent_output / f"{base_name}.TextGrid"
+                 shutil.copy2(tg_file, final_tg_path)
+-                
++
+                 print(f"MFA completed: {final_tg_path}")
+                 return str(final_tg_path)
+-                
++
+         except Exception as e:
+             print(f"MFA error: {e}")
+             raise
+-    
++
+     def _parse_textgrid(self, tg_path: str):
+         """Parse TextGrid for word and phoneme info"""
+         tg = textgrid.TextGrid.fromFile(tg_path)
+-        
++
+         results = []
+         words_tier = None
+         phones_tier = None
+-        
++
+         for tier in tg.tiers:
+             tier_name = tier.name.lower()
+             if "word" in tier_name:
+                 words_tier = tier
+             elif "phone" in tier_name:
+                 phones_tier = tier
+-        
++
+         if not words_tier:
+             print("No words tier in TextGrid")
+             return []
+-        
++
+         # Extract words
+         for interval in words_tier.intervals:
+             word = interval.mark.strip()
+@@ -544,7 +580,7 @@ class AudioCopilotTool:
+                     "phonemes": []
+                 }
+                 results.append(word_info)
+-        
++
+         # Extract phonemes
+         if phones_tier and results:
+             current_word_idx = 0
+@@ -554,39 +590,39 @@ class AudioCopilotTool:
+                     stress = None
+                     if phone[-1].isdigit():
+                         stress = int(phone[-1])
+-                    
++
+                     phone_info = {
+                         "phoneme": phone,
+                         "stress": stress,
+                         "start": float(interval.minTime),
+                         "end": float(interval.maxTime)
+                     }
+-                    
++
+                     phone_start = float(interval.minTime)
+-                    while (current_word_idx < len(results) - 1 and 
++                    while (current_word_idx < len(results) - 1 and
+                            phone_start >= results[current_word_idx]["end"]):
+                         current_word_idx += 1
+-                    
++
+                     if current_word_idx < len(results):
+                         results[current_word_idx]["phonemes"].append(phone_info)
+-        
++
+         print(f"Parsed {len(results)} words from TextGrid")
+         return results
+-    
++
+     def _simplify_stress_results(self, word_alignments):
+         """Convert phoneme data to word-level stress classification"""
+         stressed_words = []
+         unstressed_words = []
+-        
++
+         for word_info in word_alignments:
+             word = word_info['word'].strip()
+-            
++
+             if not word or word == '<eps>':
+                 continue
+-            
++
+             has_stressed = False
+             has_unstressed = False
+-            
++
+             if word_info.get('phonemes'):
+                 for phoneme in word_info['phonemes']:
+                     stress_level = phoneme.get('stress')
+@@ -595,44 +631,54 @@ class AudioCopilotTool:
+                             has_stressed = True
+                         elif stress_level == 0:
+                             has_unstressed = True
+-            
++
+             if has_stressed:
+                 stressed_words.append(word)
+             if has_unstressed:
+                 unstressed_words.append(word)
+-        
++
+         return {
+             "has_stressed_phoneme_list": stressed_words,
+             "has_unstressed_phoneme_list": unstressed_words,
+             "stressed_phoneme_words_count": len(stressed_words),
+             "unstressed_phoneme_words_count": len(unstressed_words)
+         }
+-    
+-    async def stressed_analysis(self, audio_path: str):
+-        """Analyze speech stress patterns"""
++
++    async def stressed_analysis(self, audio_path: str, transcript: str = None):
++        """Analyze speech stress patterns
++
++        Args:
++            audio_path: Path to the audio file
++            transcript: Optional pre-generated transcript. If provided, skips speech recognition.
++        """
+         print(f"Starting stress analysis: {audio_path}")
+-        
++
+         if not os.path.exists(audio_path):
+             raise FileNotFoundError(f"Audio not found: {audio_path}")
+-        
++
+         try:
+-            # Get transcript
+-            speech_result = await self.speech_recognition(audio_path)
+-            
+-            if 'error' in speech_result or not speech_result.get('text', '').strip():
+-                return {
+-                    "function": "stressed_analysis",
+-                    "error": speech_result.get('error', 'Empty transcript'),
+-                    "status": "failed"
+-                }
+-            
+-            transcript = speech_result.get('text', '').strip()
+-            
++            # Use provided transcript or run speech recognition
++            if transcript is not None and transcript.strip():
++                print(f"Using pre-generated transcript")
++                transcript = transcript.strip()
++            else:
++                # Get transcript via speech recognition
++                speech_result = await self.speech_recognition(audio_path)
++
++                if 'error' in speech_result or not speech_result.get('text', '').strip():
++                    return {
++                        "function": "stressed_analysis",
++                        "error": speech_result.get('error', 'Empty transcript'),
++                        "status": "failed"
++                    }
++
++                transcript = speech_result.get('text', '').strip()
++
+             # Run MFA
+             tg_path = self.run_mfa(audio_path, transcript)
+             word_alignments = self._parse_textgrid(tg_path)
+             stress_analysis = self._simplify_stress_results(word_alignments)
+-            
++
+             return {
+                 "function": "stressed_analysis",
+                 "has_stressed_phoneme_list": stress_analysis["has_stressed_phoneme_list"],
+@@ -642,7 +688,7 @@ class AudioCopilotTool:
+                 "hint": "Choose closest match if count doesn't match options exactly",
+                 "transcript": transcript,
+             }
+-            
++
+         except Exception as e:
+             print(f"Stress analysis error: {e}")
+             return {
+@@ -650,114 +696,114 @@ class AudioCopilotTool:
+                 "error": str(e),
+                 "status": "failed"
+             }
+-        
++
+     async def sound_classification(self, audio_path: str, categories: List[str] = None) -> Dict:
+         """Classify environmental sounds"""
+         audio, sr = self._load_audio(audio_path)
+-        
++
+         try:
+             sound_classifier = self._get_sound_classifier()
+             result = sound_classifier(audio, sampling_rate=sr)
+-            
++
+             if isinstance(result, list) and len(result) > 0:
+                 return {
+                     'function': 'sound_classification',
+                     'all_predictions': result[:5],
+                     'Hint': 'Classification may not be perfectly accurate. Consider both audio content and predictions.',
+                 }
+-            
++
+         except Exception as e:
+             return {
+                 'function': 'sound_classification',
+                 'error': str(e),
+             }
+-    
+-    async def sound_duration_analysis(self, audio_path: str, categories: List[str] = None, 
++
++    async def sound_duration_analysis(self, audio_path: str, categories: List[str] = None,
+                                      window_size=1.0, hop_size=0.5) -> Dict:
+         """Analyze duration of detected sound events"""
+         audio, sr = self._load_audio(audio_path)
+         total_samples = len(audio)
+         window_samples = int(window_size * sr)
+         hop_samples = int(hop_size * sr)
+-        
++
+         sound_classifier = self._get_sound_classifier()
+         label_durations = {}
+-        
++
+         for start in range(0, total_samples, hop_samples):
+             end = min(start + window_samples, total_samples)
+             segment = audio[start:end]
+-            
++
+             try:
+                 result = sound_classifier(segment, sampling_rate=sr)
+                 if isinstance(result, list) and len(result) > 0:
+                     top_label = max(result, key=lambda x: x['score'])['label']
+-                    
++
+                     if categories is None or top_label in categories:
+                         duration_sec = (end - start) / sr
+                         label_durations[top_label] = label_durations.get(top_label, 0.0) + duration_sec
+             except Exception as e:
+                 print(f"Error in segment {start}-{end}: {e}")
+-        
++
+         all_predictions = [{"label": k, "duration": v} for k, v in label_durations.items()]
+         all_predictions.sort(key=lambda x: x['duration'], reverse=True)
+-        
++
+         return {
+             "function": "sound_duration_analysis",
+             "duration_per_label": all_predictions,
+             "Hint": "Results may not be highly accurate. Consider audio content alongside predictions.",
+         }
+-        
+-    async def chord_recognition(self, audio_path: str) -> dict:
+-        """Recognize chords using autochord"""
+-        try:
+-            base_name = Path(audio_path).stem
+-            lab_file = Path(audio_path).parent / f"{base_name}_chords.lab"
+-            
+-            if lab_file.exists():
+-                print(f"Using cached chords: {lab_file}")
+-            else:
+-                await asyncio.to_thread(autochord.recognize, audio_path, lab_fn=lab_file)
+-            
+-            # Parse lab file
+-            chord_changes = []
+-            with open(lab_file, 'r') as f:
+-                for line in f:
+-                    parts = line.strip().split()
+-                    if len(parts) == 3:
+-                        start, end, chord = parts
+-                        chord_changes.append({
+-                            "time": float(start),
+-                            "chord": chord,
+-                        })
+-            
+-            chord_changes_str = [
+-                f"{c['time']:.2f}s: {c['chord']}" for c in chord_changes[:100]
+-            ]
+-            
+-            return {
+-                "function": "chord_recognition",
+-                "chord_changes": chord_changes_str,
+-            }
+-            
+-        except Exception as e:
+-            return {
+-                'function': 'chord_recognition',
+-                'error': str(e),
+-            }
+-    
++
++    # async def chord_recognition(self, audio_path: str) -> dict:
++    #     """Recognize chords using autochord"""
++    #     try:
++    #         base_name = Path(audio_path).stem
++    #         lab_file = Path(audio_path).parent / f"{base_name}_chords.lab"
++
++    #         if lab_file.exists():
++    #             print(f"Using cached chords: {lab_file}")
++    #         else:
++    #             await asyncio.to_thread(autochord.recognize, audio_path, lab_fn=lab_file)
++
++    #         # Parse lab file
++    #         chord_changes = []
++    #         with open(lab_file, 'r') as f:
++    #             for line in f:
++    #                 parts = line.strip().split()
++    #                 if len(parts) == 3:
++    #                     start, end, chord = parts
++    #                     chord_changes.append({
++    #                         "time": float(start),
++    #                         "chord": chord,
++    #                     })
++
++    #         chord_changes_str = [
++    #             f"{c['time']:.2f}s: {c['chord']}" for c in chord_changes[:100]
++    #         ]
++
++    #         return {
++    #             "function": "chord_recognition",
++    #             "chord_changes": chord_changes_str,
++    #         }
++
++    #     except Exception as e:
++    #         return {
++    #             'function': 'chord_recognition',
++    #             'error': str(e),
++    #         }
++
+     async def genre_analysis(self, audio_path: str) -> Dict:
+         """Analyze music genre using instrument detection and audio features"""
+         try:
+             sound_classifier = self._get_sound_classifier()
+             results = sound_classifier(audio_path)
+-            
++
+             # Filter and get top 3
+             results = [r for r in results if r['label'] != 'music']
+             results = sorted(results, key=lambda x: x['score'], reverse=True)[:3]
+             results = [{"label": r['label'], "score": float(r['score'])} for r in results]
+-            
++
+             audio_features = await self.get_audio_features(audio_path)
+-            
++
+             return {
+                 "function": "genre_analysis",
+                 "instrument": results,
+@@ -767,39 +813,39 @@ class AudioCopilotTool:
+                 "tempo": audio_features['tempo'],
+                 "Hint": "Detect genre based on audio features and classification results.",
+             }
+-            
++
+         except Exception as e:
+             return {
+                 'function': 'genre_analysis',
+                 'error': str(e),
+             }
+-    
++
+     async def get_audio_features(self, audio_path: str):
+         """Extract basic audio features"""
+         y, sr = librosa.load(audio_path)
+-        
++
+         # Volume (RMS energy)
+         rms = float(np.mean(librosa.feature.rms(y=y)))
+-        
++
+         # Pitch
+         pitches, magnitudes = librosa.piptrack(y=y, sr=sr)
+         pitch_values = pitches[magnitudes > np.median(magnitudes)]
+         avg_pitch = float(np.mean(pitch_values)) if len(pitch_values) > 0 else 0.0
+-        
++
+         # Timbre (spectral centroid)
+         centroid = float(np.mean(librosa.feature.spectral_centroid(y=y, sr=sr)))
+-        
++
+         # Tempo
+         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+         tempo = float(tempo)
+-        
++
+         return {
+             "volume": rms,
+             "pitch": avg_pitch,
+             "timbre": centroid,
+             "tempo": tempo
+         }
+-    
++
+     async def speech_to_noise_ratio(self, audio_path: str) -> Dict:
+         """Calculate speech-to-noise ratio"""
+         try:
+@@ -807,7 +853,7 @@ class AudioCopilotTool:
+             signal_power = np.mean(y**2)
+             noise_power = np.var(y - np.mean(y))
+             snr = 10 * np.log10(signal_power / noise_power)
+-            
++
+             return {
+                 'function': 'speech_to_noise_ratio',
+                 'snr': float(snr),
+diff --git a/scripts/prompts.py b/scripts/prompts.py
+index 552b457..9a34556 100644
+--- a/scripts/prompts.py
++++ b/scripts/prompts.py
+@@ -1,53 +1,255 @@
+-"""Prompt templates for Gemini tool execution"""
++"""Prompt templates for Audio LLM tool execution"""
++
++from typing import Tuple
+ 
+ TOOL_DESCRIPTIONS = """
+-Available SpeechCopilotTool Functions:
+-SPEECH ANALYSIS:
+-- speech_recognition(audio_path): Get transcript and word order detection
+-- speaker_diarization(audio_path): Split audio into segments with speaker labels and timestamps
+-- emotion_recognition(audio_path): Detect emotion changes for each speaker over time
+-- stressed_analysis(audio_path): Analyze speech stress patterns with word-level phoneme annotations
+-
+-SOUND ANALYSIS:
+-- get_audio_features(audio_path): Analyze volume, pitch, timbre, beats, time signature, and tempo
+-- sound_classification(audio_path): Classify environmental sounds and audio events
+-- sound_duration_analysis(audio_path): Get duration and temporal patterns of sound events
+-
+-MUSIC ANALYSIS:
+-- chord_recognition(audio_path): Recognize chords and analyze harmonic structure
+-- sound_classification(audio_path): Detect instrument types
+-- genre_analysis(audio_path): Get top 3 instrument types and audio features (tempo, pitch, volume)
+-
+-If no suitable function exists or you can answer directly, provide a direct answer based on the audio content.
++You have access to the following tools to analyze audio files:
++
++## SPEECH TOOLS
++1. **speech_recognition**
++   - Description: Transcribe speech to text with word-level timestamps
++   - Use when: Question asks about what was said, transcript, words spoken
++   - Parameters: audio_path (string)
++
++2. **speaker_diarization**
++   - Description: Identify different speakers in audio with timestamps
++   - Use when: Question asks about number of speakers, who is speaking, speaker changes
++   - Parameters: audio_path (string)
++
++3. **emotion_recognition**
++   - Description: Detect emotions in speech (happy, sad, angry, etc.)
++   - Use when: Question asks about mood, emotion, feeling in voice
++   - Parameters: audio_path (string)
++
++4. **stressed_analysis**
++   - Description: Analyze stress patterns in speech
++   - Use when: Question asks about stress, emphasis, or speech patterns
++   - Parameters: audio_path (string)
++
++## SOUND TOOLS
++5. **get_audio_features**
++   - Description: Extract audio features (volume, pitch, tempo, beats, timbre)
++   - Use when: Question asks about loudness, pitch, tempo, musical features or gender of speaker
++   - Parameters: audio_path (string)
++
++6. **sound_classification**
++   - Description: Classify sounds and audio events (e.g., dog barking, car horn, music)
++   - Use when: Question asks to identify what sound/noise is heard, classify audio
++   - Parameters: audio_path (string)
++
++7. **sound_duration_analysis**
++   - Description: Analyze duration and timing of sound events
++   - Use when: Question asks about how long, timing, duration
++   - Parameters: audio_path (string)
++
++8. **speech_to_noise_ratio**
++   - Description: Calculate the speech-to-noise ratio (SNR) of audio
++   - Use when: Question asks about audio quality, background noise, clarity, SNR
++   - Parameters: audio_path (string)
++
++## MUSIC TOOLS
++9. **chord_recognition**
++   - Description: Recognize musical chords in audio
++   - Use when: Question asks about chords, harmony, musical structure
++   - Parameters: audio_path (string)
++
++10. **genre_analysis**
++   - Description: Analyze music genre and instruments
++   - Use when: Question asks about genre, instruments, musical style
++   - Parameters: audio_path (string)
+ """
+ 
+-def build_initial_prompt(question: str) -> str:
+-    """Build the initial analysis prompt"""
+-    return f"""Focus on the audio clips and instructions. You have two options:
++# ---------------------------------------------------------------------------
++# Static system prompts  (tool descriptions + format rules + examples)
++# These live in the system role; the question goes in the user role.
++# ---------------------------------------------------------------------------
++
++INITIAL_SYSTEM_PROMPT = (
++    "You are an audio analysis assistant. Listen to the audio carefully and "
++    "think step-by-step before responding.\n"
++    + TOOL_DESCRIPTIONS
++    + """
++## RESPONSE FORMAT
++
++You MUST respond with EXACTLY ONE of these two formats:
++
++### Format A - Request tools (use the literal tag <tool>):
++<tool>
++{"inner_thought": "Your detailed thinking process: What does the question ask? What information do I need? Which tool(s) provide that information? Why?", "tools": ["tool_name1", "tool_name2"]}
++</tool>
++
++### Format B - Direct answer (use the literal tag <answer>):
++<answer>
++{"inner_thought": "Your detailed thinking process: What do I hear in the audio? How does it relate to the question? What is my reasoning?", "answer": "your answer"}
++</answer>
++
++## CRITICAL RULES
++
++1. **ONLY use <tool> or <answer> tags** - These are the ONLY valid XML tags
++2. **NEVER use tool names as tags** - Do NOT write <speech_recognition>, <stressed_analysis>, etc.
++3. **Valid JSON only** - Use double quotes for all strings
++4. **"tools" must be an array** - e.g., ["speech_recognition"] or ["tool1", "tool2"]
++5. **No text outside tags** - Your entire response must be within the tags
++6. **Think thoroughly** - inner_thought should show your complete reasoning process
++7. **ANSWER MUST BE EXACT OPTION TEXT** - For multiple choice questions:
++   - Your "answer" MUST be copied EXACTLY from one of the given options
++   - Do NOT paraphrase, abbreviate, or use different wording
++   - Do NOT use numbers like "6" when the option is "six"
++   - If options are ["five", "six", "seven"], answer MUST be exactly "five", "six", or "seven"
++
++## CORRECT EXAMPLES
++
++Example 1 - Counting stressed words:
++<tool>
++{"inner_thought": "The question asks to count words with stressed phonemes. To identify which words have stressed phonemes, I need phonemic stress annotations for each word. The stressed_analysis tool provides word-by-word stress annotations, which will let me count how many words contain at least one stressed phoneme.", "tools": ["stressed_analysis"]}
++</tool>
++
++Example 2 - Multiple tools needed:
++<tool>
++{"inner_thought": "The question asks which speaker said a specific phrase. I need two pieces of information: (1) the transcript to find the phrase, and (2) speaker timestamps to know who was speaking at that moment. speech_recognition gives me the transcript, and speaker_diarization gives me speaker IDs with their speaking timestamps.", "tools": ["speech_recognition", "speaker_diarization"]}
++</tool>
++
++Example 3 - Direct answer (options are ["Piano", "Guitar", "Violin"]):
++<answer>
++{"inner_thought": "I can clearly hear a piano melody in the audio. The timbre is distinctly that of a piano with hammer-struck strings. The question asks about the instrument, and I am confident this is a piano. The matching option is \'Piano\'.", "answer": "Piano"}
++</answer>
++
++## WRONG (DO NOT DO THIS)
++
++WRONG - Using tool name as tag:
++<stressed_analysis>
++{"inner_thought": "...", "tools": ["stressed_analysis"]}
++</stressed_analysis>
++
++WRONG - Text outside tags:
++I think I need tools.
++<tool>...</tool>
++
++WRONG - Missing inner_thought:
++<tool>
++{"tools": ["speech_recognition"]}
++</tool>
++
++WRONG - Answer not matching options (options are ["five", "six", "seven"]):
++<answer>
++{"inner_thought": "I counted 6 words", "answer": "6"}
++</answer>
++CORRECT version: "answer": "six"
++
++WRONG - Paraphrasing option (options are ["happy", "sad", "neutral"]):
++<answer>
++{"inner_thought": "The speaker sounds joyful", "answer": "joyful"}
++</answer>
++CORRECT version: "answer": "happy"
++
++Now respond with ONLY a <tool> or <answer> tag:"""
++)
++
++
++FINAL_SYSTEM_PROMPT = """You are an audio analysis assistant. Analyze the tool results below and answer the question.
++
++## RESPONSE FORMAT
++
++You MUST respond with EXACTLY this format (use the literal tag <answer>):
++<answer>
++{"inner_thought": "2-3 sentences max.", "answer": "your final answer"}
++</answer>
++
++## CRITICAL RULES
++
++1. **Use ONLY the <answer> tag** - This is the ONLY valid format
++2. **Valid JSON only** - Use double quotes for all strings
++3. **No text outside tags** - Your entire response must be within the <answer> tags
++4. **inner_thought is 2-3 sentences MAXIMUM** - State what the tool shows and your conclusion. Do NOT enumerate every element. Do NOT write an essay.
++5. **ANSWER MUST BE EXACT OPTION TEXT** - For multiple choice questions:
++   - Your "answer" MUST be copied EXACTLY from one of the given options in the question
++   - Do NOT paraphrase, abbreviate, or use different wording
++   - Do NOT use numbers like "6" when the option is "six"
++   - Look at the options in the question and copy one EXACTLY
++
++## EXAMPLE
++
++Question with options ["five", "six", "seven"]:
++<answer>
++{"inner_thought": "The stressed_analysis results show 6 words have at least one stressed phoneme. The matching option is 'six'.", "answer": "six"}
++</answer>
++
++Now respond with ONLY an <answer> tag:"""
++
++
++# ---------------------------------------------------------------------------
++# Builder functions — return (system_prompt, user_message) tuples
++# ---------------------------------------------------------------------------
++
++def build_initial_prompt(question: str) -> Tuple[str, str]:
++    """
++    Build the initial analysis prompt split into system and user parts.
++
++    The system prompt holds all static tool descriptions, format rules, and
++    examples.  The user message contains only the question so that the audio
++    token and the actual query stay together in the user turn.
++
++    Returns:
++        (system_prompt, user_message)
++    """
++    return INITIAL_SYSTEM_PROMPT, question
++
++
++def build_final_prompt(question: str, tool_results: dict) -> Tuple[str, str]:
++    """
++    Build the final reasoning prompt split into system and user parts.
++
++    Returns:
++        (system_prompt, user_message) where user_message contains the
++        question and the tool results for the model to reason over.
++    """
++    user_message = f"Question: {question}\n\nTool Results:\n{tool_results}"
++    return FINAL_SYSTEM_PROMPT, user_message
++
++
++# ---------------------------------------------------------------------------
++# Direct-mode prompt — same <answer> tag format, no tool machinery
++# ---------------------------------------------------------------------------
++
++DIRECT_SYSTEM_PROMPT = """You are an audio analysis assistant. Listen to the audio carefully and think step-by-step before responding.
+ 
+-1. If you can answer directly: Provide only your answer without explanation.
+-2. If you need analysis tools: Respond with ONLY Python function calls (one per line).
++## RESPONSE FORMAT
+ 
+-For tool calls, use this format:
+-function_name("path")
++You MUST respond with EXACTLY this format (use the literal tag <answer>):
++<answer>
++{"inner_thought": "Your detailed thinking process: What do I hear in the audio? How does it relate to the question? What is my reasoning?", "answer": "your answer"}
++</answer>
+ 
+-Use "path" to refer to the audio file. Do not include explanations, just function calls.
++## CRITICAL RULES
+ 
+-Question: {question}
++1. **Use ONLY the <answer> tag** - This is the ONLY valid format
++2. **Valid JSON only** - Use double quotes for all strings
++3. **No text outside tags** - Your entire response must be within the <answer> tags
++4. **Think thoroughly** - inner_thought should show your complete reasoning process
++5. **ANSWER MUST BE EXACT OPTION TEXT** - For multiple choice questions:
++   - Your "answer" MUST be copied EXACTLY from one of the given options
++   - Do NOT paraphrase, abbreviate, or use different wording
++   - Do NOT use numbers like "6" when the option is "six"
++   - If options are ["five", "six", "seven"], answer MUST be exactly "five", "six", or "seven"
+ 
+-{TOOL_DESCRIPTIONS}
++## EXAMPLE
+ 
+-Either answer directly or provide tool calls if needed."""
++Question with options ["Piano", "Guitar", "Violin"]:
++<answer>
++{"inner_thought": "I can clearly hear a piano melody. The timbre is distinctly that of a piano. The matching option is 'Piano'.", "answer": "Piano"}
++</answer>
+ 
+-def build_final_prompt(question: str, tool_results: dict) -> str:
+-    """Build the final reasoning prompt with tool results"""
+-    return f"""Focus on the audio clips and tool execution results. Answer the user's question accurately using both audio content and tool results.
++Now respond with ONLY an <answer> tag:"""
+ 
+-Original question: {question}
+ 
+-Tool execution results:
+-{tool_results}
++def build_direct_prompt(question: str) -> Tuple[str, str]:
++    """
++    Build the direct-mode prompt split into system and user parts.
+ 
+-Based on these results and audio, answer: "{question}"
++    Uses the same <answer> tag format as tool-assisted mode so that
++    parse_answer() works identically in both code paths.
+ 
+-Provide only the final answer without explanation. Choose one answer from the options even if uncertain."""
++    Returns:
++        (system_prompt, user_message)
++    """
++    return DIRECT_SYSTEM_PROMPT, question
+diff --git a/scripts/tool_execute_gemini.py b/scripts/tool_execute_gemini.py
+index 7e687bc..86909a8 100644
+--- a/scripts/tool_execute_gemini.py
++++ b/scripts/tool_execute_gemini.py
+@@ -1,4 +1,3 @@
+-import asyncio
+ import json
+ import re
+ import logging
+@@ -17,10 +16,10 @@ def setup_logging() -> logging.Logger:
+     """Configure logging with file and console handlers"""
+     log_dir = "logs"
+     os.makedirs(log_dir, exist_ok=True)
+-    
++
+     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+     log_file = os.path.join(log_dir, f"gemini_tool_{timestamp}.log")
+-    
++
+     logging.basicConfig(
+         level=logging.INFO,
+         format='%(asctime)s - %(levelname)s - %(message)s',
+@@ -29,7 +28,7 @@ def setup_logging() -> logging.Logger:
+             logging.StreamHandler()
+         ]
+     )
+-    
++
+     logger = logging.getLogger(__name__)
+     logger.info(f"Logging initialized. Log file: {log_file}")
+     return logger
+@@ -40,12 +39,12 @@ logger = setup_logging()
+ 
+ class GeminiTool:
+     """Orchestrates Gemini model with tool calling capabilities"""
+-    
++
+     def __init__(self, gemini_model: str, gemini_api_key: str = None):
+         """Initialize Gemini model and tools"""
+         self.gemini_model = self._init_gemini(gemini_api_key, gemini_model)
+         self.tool = AudioCopilotTool()
+-    
++
+     def _init_gemini(self, api_key: str, model_name: str):
+         """Initialize and configure Gemini model"""
+         try:
+@@ -57,7 +56,7 @@ class GeminiTool:
+         except Exception as e:
+             logger.error(f"Failed to load Gemini model: {e}")
+             return None
+-    
++
+     def parse_tool_calls(self, text: str) -> List[Dict]:
+         """Extract function calls from Gemini response"""
+         # Normalize input
+@@ -65,16 +64,16 @@ class GeminiTool:
+             text = text[0] if text else ""
+         if hasattr(text, 'text'):
+             text = text.text
+-        
++
+         text = str(text).strip()
+         function_calls = []
+         pattern = r'(\w+)\s*\([^)]*\)'
+-        
++
+         for line in text.split('\n'):
+             line = line.strip()
+             if not line or line.startswith(('#', '//')):
+                 continue
+-            
++
+             match = re.match(pattern, line)
+             if match:
+                 function_calls.append({
+@@ -92,19 +91,19 @@ class GeminiTool:
+                         'raw_call': line
+                     })
+                     logger.debug(f"Fallback parsing for: {line}")
+-        
++
+         return function_calls
+-    
++
+     async def execute_tools(self, function_calls: List[Dict], audio_path: str) -> Dict[str, Any]:
+         """Execute parsed function calls and collect results"""
+         results = {}
+-        
++
+         for i, call in enumerate(function_calls):
+             func_name = call['function']
+             raw_call = call['raw_call']
+-            
++
+             logger.info(f"Executing: {raw_call}")
+-            
++
+             try:
+                 # Check if function exists
+                 if not hasattr(self.tool, func_name):
+@@ -112,40 +111,40 @@ class GeminiTool:
+                     results[f"{func_name}_{i}"] = {"error": error_msg}
+                     logger.warning(error_msg)
+                     continue
+-                
++
+                 # Execute function
+                 func = getattr(self.tool, func_name)
+                 if asyncio.iscoroutinefunction(func):
+                     result = await func(audio_path)
+                 else:
+                     result = func(audio_path)
+-                
++
+                 results[f"{func_name}_{i}"] = result
+                 logger.info(f"{func_name} completed successfully")
+-                
++
+             except Exception as e:
+                 results[f"{func_name}_{i}"] = {"error": str(e)}
+                 logger.error(f"{func_name} failed: {e}")
+-        
++
+         return results
+-    
++
+     async def process_query(self, audio_path: str, question: str) -> Dict:
+         """Main workflow: analyze -> execute tools -> reason"""
+-        
++
+         logger.info("Step 1: Initial Gemini analysis")
+         initial_prompt = build_initial_prompt(question)
+-        
++
+         try:
+             # Upload audio and get initial response
+             audio_file = genai.upload_file(audio_path)
+             initial_output = self.gemini_model.generate_content([audio_file, initial_prompt])
+             initial_response = initial_output.text
+-            
++
+             logger.info(f"Initial response: {initial_response}")
+-            
++
+             # Check if tools are needed
+             function_calls = self.parse_tool_calls(initial_response)
+-            
++
+             if not function_calls:
+                 logger.info("Direct answer provided (no tools needed)")
+                 return {
+@@ -155,20 +154,20 @@ class GeminiTool:
+                     'tool_results': {},
+                     'final_response': initial_response
+                 }
+-            
++
+             # Execute tools
+             logger.info(f"Step 2: Executing {len(function_calls)} tool(s)")
+             tool_results = await self.execute_tools(function_calls, audio_path)
+             logger.info(f"Tool results: {tool_results}")
+-            
++
+             # Get final reasoning
+             logger.info("Step 3: Final Gemini reasoning")
+             final_prompt = build_final_prompt(question, tool_results)
+             final_output = self.gemini_model.generate_content([audio_file, final_prompt])
+             final_response = final_output.text
+-            
++
+             logger.info(f"Final answer: {final_response}")
+-            
++
+             return {
+                 'type': 'tool_assisted',
+                 'initial_response': initial_response,
+@@ -176,7 +175,7 @@ class GeminiTool:
+                 'tool_results': tool_results,
+                 'final_response': final_response
+             }
+-            
++
+         except Exception as e:
+             logger.error(f"Error during processing: {e}")
+             return {'type': 'error', 'error': str(e)}
+@@ -186,21 +185,21 @@ def extract_model_prediction(response: str) -> str:
+     """Extract clean answer from Gemini response"""
+     if not response:
+         return ""
+-    
++
+     response = str(response).strip()
+     if not response:
+         return ""
+-    
++
+     # Try to find explicit answer pattern
+     answer_match = re.search(r'Answer:\s*(.+)', response, re.IGNORECASE)
+     if answer_match:
+         return answer_match.group(1).strip().strip('"\'')
+-    
++
+     # Try to extract quoted strings
+     if (response.startswith('"') and response.endswith('"')) or \
+        (response.startswith("'") and response.endswith("'")):
+         return response.strip('"\'')
+-    
++
+     # Look in last line for answer keywords
+     lines = response.strip().split('\n')
+     if lines:
+@@ -213,7 +212,7 @@ def extract_model_prediction(response: str) -> str:
+             words = last_line.split()
+             if words:
+                 return words[-1].strip('.,!?')
+-    
++
+     return response
+ 
+ 
+@@ -244,7 +243,7 @@ def create_result_entry(item: dict, result: dict, model_prediction: str) -> dict
+         "difficulty": item.get("difficulty", ""),
+         "answer": item.get("answer", ""),
+     }
+-    
++
+     # Add detailed info based on result type
+     if result.get('type') == 'tool_assisted':
+         entry.update({
+@@ -259,7 +258,7 @@ def create_result_entry(item: dict, result: dict, model_prediction: str) -> dict
+             "tool_calls": [],
+             "tool_results": {}
+         })
+-    
++
+     return entry
+ 
+ 
+@@ -277,14 +276,14 @@ def save_results_batch(results: List[dict], batch_idx: int) -> None:
+ async def main():
+     """Process all questions from mmau-test.json"""
+     load_dotenv()
+-    
++
+     gemini_tool = GeminiTool(
+         gemini_api_key=os.getenv("GEMINI_API_KEY"),
+         gemini_model="gemini-2.5-pro"
+     )
+-    
++
+     logger.info("Starting batch processing")
+-    
++
+     # Load questions
+     try:
+         with open("mmau-test.json", "r", encoding="utf-8") as f:
+@@ -293,15 +292,15 @@ async def main():
+     except Exception as e:
+         logger.error(f"Error loading JSON file: {e}")
+         return
+-    
++
+     results = []
+     batch_size = 1000
+     batch_idx = 0
+-    
++
+     for i, item in enumerate(questions_data):
+         logger.info(f"Processing question {i+1}/{len(questions_data)}")
+         logger.info(f"ID: {item.get('id', 'N/A')} | Audio: {item.get('audio_id', 'N/A')}")
+-        
++
+         try:
+             audio_id = item.get("audio_id", "")
+             question = format_question_with_choices(
+@@ -309,10 +308,10 @@ async def main():
+                 item.get("choices", [])
+             )
+             result = await gemini_tool.process_query(audio_id, question)
+-            model_prediction = extract_model_prediction(result.get('final_response', '')) 
++            model_prediction = extract_model_prediction(result.get('final_response', ''))
+             result_entry = create_result_entry(item, result, model_prediction)
+             results.append(result_entry)
+-            
++
+         except Exception as e:
+             logger.error(f"Error processing question {i+1}: {e}")
+             # Add error entry
+@@ -330,12 +329,12 @@ async def main():
+                 "sub-category": item.get("sub-category", ""),
+                 "difficulty": item.get("difficulty", "")
+             })
+-        
++
+         if len(results) == batch_size:
+             save_results_batch(results, batch_idx)
+             batch_idx += 1
+             results = []
+-            
++
+     if results:
+         save_results_batch(results, batch_idx)
+ 

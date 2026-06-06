@@ -48,7 +48,7 @@ check_patch() {
 
 failed=0
 
-check_patch "third_party/Audio-Maestro" "patches/audio-maestro-main/tracked_changes.patch" || failed=1
+check_patch "third_party/Audio-Maestro" "patches/audio-maestro-main/tracked_source_only.patch" || failed=1
 check_patch "third_party/DeSTA2.5-Audio" "patches/desta25-audio/tracked_changes.patch" || failed=1
 check_patch "third_party/ToolRL" "patches/desta-grpo-toolrl/tracked_changes.patch" || failed=1
 

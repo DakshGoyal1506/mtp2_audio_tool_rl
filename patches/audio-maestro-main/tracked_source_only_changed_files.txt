@@ -1,0 +1,3 @@
+M	audio_maestro/audio_copilot.py
+M	scripts/prompts.py
+M	scripts/tool_execute_gemini.py
