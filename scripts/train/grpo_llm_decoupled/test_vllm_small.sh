@@ -14,7 +14,14 @@
 # Quick smoke test: try to serve a small model with vLLM on DGX
 # =============================================================================
 
-eval "$(/home/speech-nlp-cse/24m0756/anaconda3/bin/conda shell.bash hook)"
+if command -v conda >/dev/null 2>&1; then
+    eval "$(conda shell.bash hook)"
+elif [[ -f "${HOME}/anaconda3/etc/profile.d/conda.sh" ]]; then
+    source "${HOME}/anaconda3/etc/profile.d/conda.sh"
+else
+    echo "Error: conda is not available. Load conda or install it under \$HOME/anaconda3." >&2
+    exit 1
+fi
 conda activate vllm-env
 export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
 export TRANSFORMERS_OFFLINE=1

@@ -18,13 +18,20 @@
 #   sbatch grpo_single_phase_llm/benchmark/bench_judge.sh --num-requests 100
 # =============================================================================
 
-eval "$(/home/speech-nlp-cse/24m0756/anaconda3/bin/conda shell.bash hook)"
+if command -v conda >/dev/null 2>&1; then
+    eval "$(conda shell.bash hook)"
+elif [[ -f "${HOME}/anaconda3/etc/profile.d/conda.sh" ]]; then
+    source "${HOME}/anaconda3/etc/profile.d/conda.sh"
+else
+    echo "Error: conda is not available. Load conda or install it under \$HOME/anaconda3." >&2
+    exit 1
+fi
 conda activate vllm-env
 export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
 export LIBRARY_PATH="$CONDA_PREFIX/lib/stubs:$LIBRARY_PATH"
 export TRANSFORMERS_OFFLINE=1
 export HF_HUB_OFFLINE=1
-export TIKTOKEN_RS_CACHE_DIR=/home/speech-nlp-cse/24m0756/.cache/tiktoken-rs-cache
+export TIKTOKEN_RS_CACHE_DIR="${TIKTOKEN_RS_CACHE_DIR:-$HOME/.cache/tiktoken-rs-cache}"
 
 cd "${SLURM_SUBMIT_DIR:-$(dirname $(dirname $(dirname $(realpath $0))))}"
 echo "Working dir: $PWD"
