@@ -1,0 +1,15 @@
+torch
+torchaudio
+transformers
+datasets
+accelerate
+librosa
+soundfile
+ffmpeg-python
+scipy
+scikit-learn
+python-dotenv
+textgrid
+
+# Optional tool-specific dependency used by chord-processing scripts.
+# Install separately if needed: autochord
